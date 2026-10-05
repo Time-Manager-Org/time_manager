@@ -1,0 +1,96 @@
+:root {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --bg-color: #f9fafb;
+  --card-bg: #ffffff;
+  --text-color: #111827;
+  --border-color: #e5e7eb;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+.auth-container, .account-container, .page-container {
+  max-width: 450px;
+  margin: 40px auto;
+  padding: 32px;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.form-group {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 6px;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.error-badge {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-size: 0.875rem;
+}
+
+nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 32px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+}
+
+nav a {
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+nav a.router-link-active {
+  color: var(--primary-color);
+  font-weight: 700;
+}
