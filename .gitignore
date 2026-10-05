@@ -1,2 +1,33 @@
 .DS_Store
 .env
+
+
+# Theme 05 - bs-auth
+Theme_05/bs-auth/node_modules/
+Theme_05/bs-auth/dist/
+Theme_05/bs-auth/.env.local
+Theme_05/bs-auth/.env.*.local
+Theme_05/bs-auth/.DS_Store
+Theme_05/bs-auth/npm-debug.log*
+Theme_05/bs-auth/yarn-debug.log*
+Theme_05/bs-auth/yarn-error.log*
+Theme_05/bs-auth/pnpm-debug.log*
+Theme_05/bs-auth/.idea/
+Theme_05/bs-auth/.vscode/
+Theme_05/bs-auth/*.suo
+Theme_05/bs-auth/*.ntvs*
+Theme_05/bs-auth/*.njsproj
+Theme_05/bs-auth/*.sln
+Theme_05/bs-auth/*.sw?
+
+# Theme 05 - bs_auth_api
+Theme_05/bs_auth_api/_build/
+Theme_05/bs_auth_api/cover/
+Theme_05/bs_auth_api/deps/
+Theme_05/bs_auth_api/doc/
+Theme_05/bs_auth_api/.fetch
+Theme_05/bs_auth_api/erl_crash.dump
+Theme_05/bs_auth_api/*.ez
+Theme_05/bs_auth_api/tmp/
+Theme_05/bs_auth_api/bs_auth_api-*.tar
+Theme_05/bs_auth_api/.elixir_ls/
