@@ -8,6 +8,8 @@ defmodule TimeManager.Accounts do
 
   alias TimeManager.Accounts.User
 
+  @token_max_age_seconds 60 * 60 # 1 hour
+
   @doc """
   Returns the list of users.
 
@@ -48,6 +50,10 @@ defmodule TimeManager.Accounts do
 
   """
   def get_user!(id), do: Repo.get!(User, id)
+
+  # This function is used to get a user by ID without raising an error if the user does not exist.
+
+  def get_user(id), do: Repo.get(User, id)
 
   @doc """
   Creates a user.
@@ -112,5 +118,41 @@ defmodule TimeManager.Accounts do
   """
   def change_user(%User{} = user, attrs \\ %{}) do
     User.changeset(user, attrs)
+  end
+
+
+  ## Authentication functions
+
+  def authenticate_user(username, password) do
+    user = Repo.get_by(User, username: username)
+
+    cond do
+      user && Bcrypt.verify_pass(password, user.password_hash) ->
+        # Salt used here: "user_auth"
+        token = Phoenix.Token.sign(TimeManagerWeb.Endpoint, "user_auth", user.id)
+        {:ok, user, token}
+
+      user ->
+        {:error, :unauthorized}
+
+      true ->
+        Bcrypt.no_user_verify()
+        {:error, :unauthorized}
+    end
+  end
+
+  def verify_token(token) do
+    case Phoenix.Token.verify(BsAuthApiWeb.Endpoint, "user_auth", token,
+           max_age: @token_max_age_seconds
+         ) do
+      {:ok, user_id} ->
+        case get_user(user_id) do
+          nil -> {:error, :user_not_found}
+          user -> {:ok, user}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end

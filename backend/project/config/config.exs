@@ -64,3 +64,8 @@ config :phoenix, :json_library, Jason
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
+
+
+# Signing secret key for joken
+config :joken, default_signer: "Attendance_should_not_be_mandatory"
+# should be changed in production to something better I think

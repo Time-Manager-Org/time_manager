@@ -1,39 +1,48 @@
-<script>
-import User from './components/User.vue'
-import WorkingTimes from './components/WorkingTimes.vue'
-import WorkingTime from './components/WorkingTime.vue'
-import ClockManager from './components/ClockManager.vue'
-import ChartManager from './components/ChartManager.vue'
+<script> 
+import api from './api'
 
 export default {
-  components: {
-    User,
-    WorkingTimes,
-    WorkingTime,
-    ClockManager,
-    ChartManager
-  },
+  name: 'App',
 
-  data() {
-    return {
-      currentUserId: null
+  computed: {
+    isLoggedIn() {
+      return !!localStorage.getItem('xsrfToken');
     }
   },
 
   methods: {
-    changeUser(userId) {
-      this.currentUserId = userId
+    async disconnect() {
+      try {
+        await api.post('/users/sign_out');
+      } catch (err) {
+        console.error('Logout error:', err);
+      } finally {
+        localStorage.clear();
+        this.$router.push('/sign_in');
+      }
     }
   }
 }
+
+
+
 </script>
 
 <template>
-  <main>
-    <User @userChanged="changeUser" />
-    <ClockManager :userId="currentUserId" />
-    <WorkingTimes :userId="currentUserId" />
-    <WorkingTime :userId="currentUserId" />
-    <ChartManager :userId="currentUserId" />
-  </main>
+  <div id="app">
+    <nav style="padding: 15px; border-bottom: 1px solid #ddd; margin-bottom: 20px;">
+      <router-link to="/">Home</router-link> |
+      <router-link to="/sign_in">Sign In</router-link> |
+      <router-link to="/sign_up">Sign Up</router-link>
+
+      <button 
+        v-if="isLoggedIn" 
+        @click="disconnect" 
+        style="margin-left: 15px; cursor: pointer;"
+      >
+        Logout
+      </button>
+    </nav>
+    <router-view />
+  </div>
 </template>

@@ -71,7 +71,11 @@ defmodule TimeManager.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       # CORS to allow requests from other domains(Vue.js, React.js, etc.)
-      {:cors_plug, "~> 3.0"}
+      {:cors_plug, "~> 3.0"},
+      # for password hashing and authentication
+      {:bcrypt_elixir, "~> 3.0"},
+      {:plug_cowboy, "~> 2.6"},
+      {:joken, "~> 2.6"}
     ]
   end
 
