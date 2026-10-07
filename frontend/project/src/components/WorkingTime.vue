@@ -13,7 +13,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '../api'
 
 export default {
   name: "WorkingTime",
@@ -47,9 +47,9 @@ export default {
         return
       }
 
-      axios
+      api
         .post(
-          `/api/workingtime/${this.userId}`,
+          `/workingtime/${this.userId}`,
           this.workingTimeParams()
         )
         .then((response) => {
@@ -61,9 +61,9 @@ export default {
     },
 
     updateWorkingTime() {
-      axios
+      api
         .put(
-          `/api/workingtime/${this.workingTimeId}`,
+          `/workingtime/${this.workingTimeId}`,
           this.workingTimeParams()
         )
         .catch((error) => {
@@ -72,8 +72,8 @@ export default {
     },
 
     deleteWorkingTime() {
-      axios
-        .delete(`/api/workingtime/${this.workingTimeId}`)
+      api
+        .delete(`/workingtime/${this.workingTimeId}`)
         .then(() => {
           this.workingTimeId = null
           this.start = ""

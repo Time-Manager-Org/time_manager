@@ -19,7 +19,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '../api'
 
 export default {
   name: "ClockManager",
@@ -54,8 +54,8 @@ export default {
         return
       }
 
-      axios
-        .get(`/api/clocks/${this.userId}`)
+      api
+        .get(`/clocks/${this.userId}`)
         .then((response) => {
           const clockData = response.data.data
 
@@ -77,8 +77,8 @@ export default {
       }
 
       if (!this.clockIn) {
-        axios
-          .post(`/api/clocks/${this.userId}`)
+        api
+          .post(`/clocks/${this.userId}`)
           .then((response) => {
             this.clockIn = true
             this.startDateTime = response.data.data.time
@@ -92,10 +92,10 @@ export default {
       const startTime = this.startDateTime
       const endTime = new Date().toISOString()
 
-      axios
-        .post(`/api/clocks/${this.userId}`)
+      api
+        .post(`/clocks/${this.userId}`)
         .then(() => {
-          return axios.post(`/api/workingtime/${this.userId}`, {
+          return api.post(`/workingtime/${this.userId}`, {
             workingtime: {
               start: startTime,
               end: endTime

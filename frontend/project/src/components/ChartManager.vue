@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import axios from 'axios'
+import api from '../api'
 import { Bar, Line, Pie } from 'vue-chartjs'
 
 import {
@@ -102,8 +102,8 @@ export default {
         return
       }
 
-      axios
-        .get(`/api/workingtime/${this.userId}`)
+      api
+        .get(`/workingtime/${this.userId}`)
         .then((response) => {
           const workingTimes = response.data.data || []
 

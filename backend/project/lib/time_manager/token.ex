@@ -1,4 +1,4 @@
-defmodule BsAuthApi.Token do
+defmodule TimeManager.Token do
   use Joken.Config
 
   def token_config do

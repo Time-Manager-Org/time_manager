@@ -7,6 +7,7 @@ defmodule TimeManagerWeb.Plugs.AuthPlug do
   def call(%Plug.Conn{method: "OPTIONS"} = conn, _opts), do: conn
 
   def call(conn, _opts) do
+    # IO.inspect(conn, label: "AUTH PLUG CONN")
     case get_req_header(conn, "x-xsrf-token") do
       [token] ->
         case TimeManager.Accounts.verify_token(token) do
