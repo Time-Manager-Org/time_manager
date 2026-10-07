@@ -6,7 +6,8 @@ import SignUp from './components/SignUp.vue';
 
 const routes = [
   { path: '/', component: Home, meta: { requiresAuth: true } },
-  { path: '/sign_in', component: SignIn },
+  { path: '/login', component: SignIn },
+  { path: '/sign_in', redirect: '/login' },
   { path: '/sign_up', component: SignUp }
 ];
 
@@ -19,7 +20,7 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('xsrfToken')
 
   if (to.meta.requiresAuth && !token) {
-    next('/sign_in')
+    next('/login')
   } else {
     next()
   }
