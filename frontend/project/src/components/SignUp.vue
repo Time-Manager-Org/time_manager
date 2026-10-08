@@ -1,72 +1,88 @@
 <template>
   <div class="signup-page">
-    <header class="signup-hero"></header>
+    <AuthBrandPanel />
 
-    <main class="signup-card">
-      <div class="auth-tabs" aria-label="Account access">
-        <router-link to="/login" class="tab">Login</router-link>
-        <router-link to="/sign_up" class="tab active" aria-current="page">Sign up</router-link>
+    <div class="signup-content">
+      <div class="desktop-top-action">
+        <span>Already have an account?</span>
+        <router-link to="/login">Login</router-link>
       </div>
 
-      <form class="signup-form" @submit.prevent="signUp">
-        <div class="form-group">
-          <label for="signup-full-name">Full name</label>
-          <div class="input-shell">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
-            </svg>
-            <input id="signup-full-name" v-model="full_name" type="text" placeholder="Your full name" autocomplete="name" required />
-          </div>
+      <header class="signup-hero"></header>
+
+      <main class="signup-card">
+        <div class="desktop-heading">
+          <h1>Create your account</h1>
+          <p>Enter your details to set up your workspace.</p>
         </div>
 
-        <div class="form-group">
-          <label for="signup-username">Username</label>
-          <div class="input-shell">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M16 8v5a2 2 0 0 0 4 0v-1a8 8 0 1 0-3 6" />
-              <path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
-            </svg>
-            <input id="signup-username" v-model="username" type="text" placeholder="your_username" autocomplete="username" required />
-          </div>
+        <div class="auth-tabs" aria-label="Account access">
+          <router-link to="/login" class="tab">Login</router-link>
+          <router-link to="/sign_up" class="tab active" aria-current="page">Sign up</router-link>
         </div>
 
-        <div class="form-group">
-          <label for="signup-email">Email address</label>
-          <div class="input-shell">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="14" rx="2" />
-              <path d="m4 7 8 6 8-6" />
-            </svg>
-            <input id="signup-email" v-model="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+        <form class="signup-form" @submit.prevent="signUp">
+          <div class="form-group">
+            <label for="signup-full-name">Full name</label>
+            <div class="input-shell">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
+              </svg>
+              <input id="signup-full-name" v-model="full_name" type="text" placeholder="Your full name" autocomplete="name" required />
+            </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label for="signup-password">Password</label>
-          <div class="input-shell">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="4" y="10" width="16" height="11" rx="2" />
-              <path d="M8 10V7a4 4 0 1 1 8 0v3M12 14v3" />
-            </svg>
-            <input id="signup-password" v-model="password" type="password" placeholder="Create a password" autocomplete="new-password" required />
+          <div class="form-group">
+            <label for="signup-username">Username</label>
+            <div class="input-shell">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M16 8v5a2 2 0 0 0 4 0v-1a8 8 0 1 0-3 6" />
+                <path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
+              </svg>
+              <input id="signup-username" v-model="username" type="text" placeholder="your_username" autocomplete="username" required />
+            </div>
           </div>
-        </div>
 
-        <div v-if="error" class="error-badge" role="alert">{{ error }}</div>
-        <button type="submit" class="signup-submit">Create account</button>
-      </form>
-    </main>
+          <div class="form-group">
+            <label for="signup-email">Email address</label>
+            <div class="input-shell">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="m4 7 8 6 8-6" />
+              </svg>
+              <input id="signup-email" v-model="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+            </div>
+          </div>
 
-    <p class="signup-footer">Secure time management for modern teams</p>
+          <div class="form-group">
+            <label for="signup-password">Password</label>
+            <div class="input-shell">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="10" width="16" height="11" rx="2" />
+                <path d="M8 10V7a4 4 0 1 1 8 0v3M12 14v3" />
+              </svg>
+              <input id="signup-password" v-model="password" type="password" placeholder="Create a password" autocomplete="new-password" required />
+            </div>
+          </div>
+
+          <div v-if="error" class="error-badge" role="alert">{{ error }}</div>
+          <button type="submit" class="signup-submit">Create account</button>
+        </form>
+      </main>
+
+      <p class="signup-footer">Secure time management for modern teams</p>
+    </div>
   </div>
 </template>
 
 <script>
 import api from '../api';
+import AuthBrandPanel from './AuthBrandPanel.vue';
 
 export default {
   name: 'SignUp',
+  components: { AuthBrandPanel },
   data() {
     return {
       username: '',
@@ -98,22 +114,33 @@ export default {
 
 <style scoped>
 .signup-page {
-  --blue: #0b84ff;
+  --accent: #173f65;
   position: fixed;
   z-index: 20;
   inset: 0;
-  overflow-y: auto;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: #f0f0f6;
-  color: #33343a;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--app-background);
+  color: var(--app-text);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.signup-content {
+  display: contents;
+}
+
 .signup-hero {
-  min-height: 390px;
-  padding-top: max(48px, env(safe-area-inset-top));
-  background: linear-gradient(128deg, #12345a 0%, #124b7c 100%);
+  box-sizing: border-box;
+  height: 31vh;
+  min-height: 0;
+  padding-top: max(24px, env(safe-area-inset-top));
+  background: linear-gradient(128deg, #f6faf7 0%, #eaf3ed 100%);
+}
+
+.desktop-top-action,
+.desktop-heading {
+  display: none;
 }
 
 .signup-card {
@@ -122,8 +149,9 @@ export default {
   margin: -40px auto 0;
   padding: 36px;
   border-radius: 40px;
-  background: #fff;
-  box-shadow: 0 18px 55px rgb(24 42 75 / 9%);
+  border: 1px solid #e3ebe5;
+  background: var(--app-surface);
+  box-shadow: 0 18px 55px rgb(39 74 52 / 10%);
 }
 
 .auth-tabs {
@@ -131,7 +159,7 @@ export default {
   gap: 6px;
   padding: 6px;
   border-radius: 21px;
-  background: #f1f1f6;
+  background: #f0f4f1;
 }
 
 .tab {
@@ -140,7 +168,7 @@ export default {
   flex: 1;
   place-items: center;
   border-radius: 17px;
-  color: #888990;
+  color: #77847b;
   font-size: 22px;
   font-weight: 650;
   text-decoration: none;
@@ -148,8 +176,8 @@ export default {
 
 .tab.active {
   background: #fff;
-  box-shadow: 0 3px 14px rgb(27 37 62 / 9%);
-  color: #24252a;
+  box-shadow: 0 3px 14px rgb(39 74 52 / 9%);
+  color: var(--accent);
 }
 
 .signup-form {
@@ -164,7 +192,7 @@ export default {
 }
 
 .form-group label {
-  color: #3c3d42;
+  color: #303a33;
   font-size: 20px;
   font-weight: 650;
 }
@@ -175,15 +203,15 @@ export default {
   align-items: center;
   gap: 16px;
   padding: 0 22px;
-  border: 2px solid #dedee5;
+  border: 1px solid #dce5de;
   border-radius: 21px;
-  background: #fafafd;
+  background: #fafcfb;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .input-shell:focus-within {
-  border-color: var(--blue);
-  box-shadow: 0 0 0 4px rgb(11 132 255 / 12%);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgb(23 63 101 / 12%);
 }
 
 .input-shell svg {
@@ -191,7 +219,7 @@ export default {
   height: 26px;
   flex: 0 0 26px;
   fill: none;
-  stroke: #92949b;
+  stroke: #89958d;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2;
@@ -206,7 +234,7 @@ export default {
   outline: 0;
   background: transparent;
   box-shadow: none;
-  color: #303139;
+  color: #263129;
   font: inherit;
   font-size: 21px;
 }
@@ -217,83 +245,317 @@ export default {
 }
 
 .input-shell input::placeholder {
-  color: #96979d;
+  color: #89958d;
   opacity: 1;
 }
 
 .signup-submit {
   min-height: 84px;
   margin: 0;
+  border: 0;
   border-radius: 23px;
-  background: var(--blue);
-  box-shadow: 0 14px 30px rgb(11 132 255 / 22%);
+  background: linear-gradient(100deg, #173f65, #285b86);
+  box-shadow: 0 14px 30px rgb(23 63 101 / 18%);
+  color: #fff;
   font-size: 22px;
   font-weight: 700;
 }
 
 .signup-submit:hover {
-  background: #0878e8;
+  background: linear-gradient(100deg, #123553, #214b70);
   opacity: 1;
 }
 
 .error-badge {
   margin-top: -8px;
-  color: #b42318;
+  color: #b8443f;
   font-size: 15px;
 }
 
 .signup-footer {
   margin: 32px 20px max(28px, env(safe-area-inset-bottom));
-  color: #94959d;
+  color: #78857c;
   font-size: 18px;
   text-align: center;
 }
 
 @media (max-width: 480px) {
   .signup-hero {
-    min-height: 355px;
-    padding-top: max(40px, env(safe-area-inset-top));
+    height: 22vh;
+    min-height: 118px;
+    max-height: 160px;
+    padding-top: max(22px, env(safe-area-inset-top));
   }
 
   .signup-card {
     width: calc(100% - 28px);
-    padding: 24px 22px 28px;
+    margin-top: -28px;
+    padding: 16px 18px 18px;
     border-radius: 32px;
   }
 
   .tab {
-    min-height: 60px;
+    min-height: 48px;
     font-size: 18px;
   }
 
   .signup-form {
-    gap: 19px;
-    margin-top: 28px;
+    gap: 12px;
+    margin-top: 16px;
   }
 
   .form-group label {
-    font-size: 18px;
+    font-size: 16px;
+  }
+
+  .form-group {
+    gap: 6px;
   }
 
   .input-shell {
-    min-height: 68px;
-    gap: 13px;
-    padding: 0 16px;
-    border-radius: 18px;
+    min-height: 50px;
+    gap: 11px;
+    padding: 0 14px;
+    border-radius: 16px;
   }
 
   .input-shell input {
+    font-size: 15px;
+  }
+
+  .signup-submit {
+    min-height: 54px;
+    border-radius: 17px;
     font-size: 17px;
+  }
+
+  .signup-footer {
+    margin-top: 10px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 960px) {
+  .signup-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    overflow: hidden;
+    background: var(--app-background);
+  }
+
+  .signup-content {
+    grid-column: 2;
+    grid-row: 1;
+    position: relative;
+    display: flex;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 100px clamp(24px, 2.4vw, 44px) 32px;
+  }
+
+  .desktop-top-action {
+    position: absolute;
+    top: 42px;
+    right: clamp(24px, 2.4vw, 44px);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #738078;
+    font-size: 17px;
+  }
+
+  .desktop-top-action a {
+    padding: 12px 20px;
+    border: 1px solid var(--accent);
+    border-radius: 13px;
+    color: #fff;
+    background: var(--accent);
+    font-weight: 650;
+    text-decoration: none;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .desktop-top-action a:hover {
+    border-color: #102f4b;
+    background: #102f4b;
+  }
+
+  .desktop-heading {
+    display: block;
+    width: 100%;
+    margin-bottom: 28px;
+  }
+
+  .desktop-heading h1 {
+    margin: 0 0 18px;
+    color: #202923;
+    font-size: clamp(38px, 4vw, 58px);
+    letter-spacing: -1.7px;
+  }
+
+  .desktop-heading p {
+    margin: 0;
+    color: #768279;
+    font-size: 21px;
+    line-height: 1.55;
+  }
+
+  .signup-hero,
+  .auth-tabs,
+  .signup-footer {
+    display: none;
+  }
+
+  .signup-card {
+    box-sizing: border-box;
+    width: min(100%, 520px);
+    margin: 0;
+    padding: clamp(28px, 3vw, 46px);
+    border: 1px solid #e3ebe5;
+    border-radius: 28px;
+    background: var(--app-surface);
+    box-shadow: 0 24px 70px rgb(39 74 52 / 10%), 0 0 45px rgb(33 135 90 / 7%);
+  }
+
+  .signup-form {
+    gap: 18px;
+    margin-top: 0;
+  }
+
+  .form-group {
+    gap: 10px;
+  }
+
+  .form-group label {
+    font-size: 17px;
+  }
+
+  .input-shell {
+    min-height: 65px;
+    border-radius: 15px;
+  }
+
+  .input-shell input {
+    font-size: 18px;
   }
 
   .signup-submit {
     min-height: 72px;
-    border-radius: 20px;
-    font-size: 19px;
+    border-radius: 17px;
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 960px) and (max-height: 850px) {
+  .signup-content {
+    padding-top: 78px;
+    padding-bottom: 18px;
+  }
+
+  .signup-card {
+    padding: 20px;
+  }
+
+  .desktop-heading {
+    margin-bottom: 14px;
+  }
+
+  .desktop-heading h1 {
+    margin-bottom: 8px;
+    font-size: clamp(30px, 3.1vw, 40px);
+  }
+
+  .desktop-heading p {
+    font-size: 15px;
+  }
+
+  .signup-form {
+    gap: 10px;
+  }
+
+  .form-group {
+    gap: 6px;
+  }
+
+  .form-group label {
+    font-size: 14px;
+  }
+
+  .input-shell {
+    min-height: 52px;
+  }
+
+  .signup-submit {
+    min-height: 56px;
+  }
+}
+
+@media (min-width: 960px) and (max-height: 650px) {
+  .signup-content {
+    padding: 54px 26px 10px;
+  }
+
+  .signup-card {
+    padding: 14px 18px;
+  }
+
+  .desktop-heading h1 {
+    font-size: 28px;
+  }
+
+  .desktop-heading p {
+    font-size: 14px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+  }
+
+  .input-shell {
+    min-height: 45px;
+  }
+
+  .signup-submit {
+    min-height: 48px;
+    font-size: 17px;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 480px) {
+  .signup-hero {
+    height: 17vh;
+    min-height: 82px;
+  }
+
+  .signup-card {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .signup-form {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .form-group label {
+    font-size: 14px;
+  }
+
+  .input-shell {
+    min-height: 42px;
+  }
+
+  .signup-submit {
+    min-height: 46px;
   }
 
   .signup-footer {
-    font-size: 15px;
+    margin-top: 6px;
   }
 }
 </style>
