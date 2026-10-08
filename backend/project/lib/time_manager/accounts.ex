@@ -7,6 +7,8 @@ defmodule TimeManager.Accounts do
   alias TimeManager.Repo
 
   alias TimeManager.Accounts.User
+  alias TimeManager.Clocks.Clock
+  alias TimeManager.Workingtimes.Workingtime
 
   @token_max_age_seconds 60 * 60 # 1 hour
 
@@ -32,8 +34,38 @@ defmodule TimeManager.Accounts do
         username -> where(query, [u], u.username == ^username)
       end
 
-    Repo.all(query)
+    Repo.all(from u in query, order_by: [asc: u.inserted_at, asc: u.id])
   end
+
+  def list_team_users(manager_id) do
+    Repo.all(
+      from u in User,
+        where: u.manager_id == ^manager_id and u.role == :employee,
+        order_by: [asc: u.full_name, asc: u.id]
+    )
+  end
+
+  def can_access_user_data?(%User{role: :admin}, _user_id), do: true
+
+  def can_access_user_data?(%User{id: user_id, role: role} = user, requested_id)
+      when role in [:employee, :manager] do
+    if to_string(user_id) == to_string(requested_id) do
+      true
+    else
+      case user do
+        %User{role: :manager, id: manager_id} ->
+          case Integer.parse(to_string(requested_id)) do
+            {id, ""} -> Repo.exists?(from u in User, where: u.id == ^id and u.manager_id == ^manager_id)
+            _ -> false
+          end
+
+        _ ->
+          false
+      end
+    end
+  end
+
+  def can_access_user_data?(_user, _user_id), do: false
 
   @doc """
   Gets a single user.
@@ -91,6 +123,12 @@ defmodule TimeManager.Accounts do
     |> Repo.update()
   end
 
+  def update_user_role(%User{} = user, attrs) do
+    user
+    |> User.role_changeset(attrs)
+    |> Repo.update()
+  end
+
   @doc """
   Deletes a user.
 
@@ -104,7 +142,15 @@ defmodule TimeManager.Accounts do
 
   """
   def delete_user(%User{} = user) do
-    Repo.delete(user)
+    Repo.transaction(fn ->
+      Repo.delete_all(from clock in Clock, where: clock.user_id == ^user.id)
+      Repo.delete_all(from workingtime in Workingtime, where: workingtime.user_id == ^user.id)
+
+      case Repo.delete(user) do
+        {:ok, deleted_user} -> deleted_user
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
   end
 
   @doc """
@@ -128,9 +174,12 @@ defmodule TimeManager.Accounts do
 
     cond do
       user && Bcrypt.verify_pass(password, user.password_hash) ->
-        # Salt used here: "user_auth"
-        token = Phoenix.Token.sign(TimeManagerWeb.Endpoint, "user_auth", user.id)
-        {:ok, user, token}
+        if user.status == :active do
+          token = Phoenix.Token.sign(TimeManagerWeb.Endpoint, "user_auth", user.id)
+          {:ok, user, token}
+        else
+          {:error, :unauthorized}
+        end
 
       user ->
         {:error, :unauthorized}
@@ -149,7 +198,8 @@ defmodule TimeManager.Accounts do
       {:ok, user_id} ->
         case get_user(user_id) do
           nil -> {:error, :user_not_found}
-          user -> {:ok, user}
+          %User{status: :active} = user -> {:ok, user}
+          _inactive_user -> {:error, :unauthorized}
         end
 
       {:error, reason} ->

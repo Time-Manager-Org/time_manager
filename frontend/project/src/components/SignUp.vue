@@ -8,7 +8,7 @@
         <router-link to="/login">Login</router-link>
       </div>
 
-      <header class="signup-hero"></header>
+      <header class="signup-hero"><h1>Create your account</h1><p>Enter your details to set up your workspace.</p></header>
 
       <main class="signup-card">
         <div class="desktop-heading">
@@ -36,11 +36,9 @@
             <label for="signup-username">Username</label>
             <div class="input-shell">
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M16 8v5a2 2 0 0 0 4 0v-1a8 8 0 1 0-3 6" />
-                <path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
+                <path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
               </svg>
-              <input id="signup-username" v-model="username" type="text" placeholder="your_username" autocomplete="username" required />
+              <input id="signup-username" v-model="username" type="text" placeholder="Username" autocomplete="username" required />
             </div>
           </div>
 
@@ -120,23 +118,37 @@ export default {
   inset: 0;
   height: 100vh;
   height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--app-background);
   color: var(--app-text);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .signup-content {
-  display: contents;
+  display: grid;
+  min-height: 100dvh;
+  grid-template-rows: minmax(130px, 22vh) 1fr auto;
 }
 
 .signup-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 7px;
+  overflow: hidden;
   box-sizing: border-box;
-  height: 31vh;
+  width: 100%;
+  height: auto;
   min-height: 0;
-  padding-top: max(24px, env(safe-area-inset-top));
-  background: linear-gradient(128deg, #f6faf7 0%, #eaf3ed 100%);
+  padding: max(24px, env(safe-area-inset-top)) clamp(24px, 6vw, 64px) 20px;
+  color: #fff;
+  background: #102c4b;
 }
+
+.signup-hero h1 { margin: 0; color: #fff; font-size: clamp(25px, 6.8vw, 34px); font-weight: 740; letter-spacing: -.8px; line-height: 1.12; }
+.signup-hero > p { max-width: 430px; margin: 6px 0 0; color: #c3d2e1; font-size: 12px; line-height: 1.45; }
 
 .desktop-top-action,
 .desktop-heading {
@@ -145,8 +157,9 @@ export default {
 
 .signup-card {
   position: relative;
+  align-self: center;
   width: min(528px, calc(100% - 48px));
-  margin: -40px auto 0;
+  margin: 0 auto;
   padding: 36px;
   border-radius: 40px;
   border: 1px solid #e3ebe5;
@@ -281,17 +294,19 @@ export default {
 
 @media (max-width: 480px) {
   .signup-hero {
-    height: 22vh;
-    min-height: 118px;
-    max-height: 160px;
-    padding-top: max(22px, env(safe-area-inset-top));
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: max(20px, env(safe-area-inset-top)) 24px 18px;
   }
 
   .signup-card {
     width: calc(100% - 28px);
-    margin-top: -28px;
+    margin-top: 0;
     padding: 16px 18px 18px;
     border-radius: 32px;
+    border-color: #e7eaf0;
+    box-shadow: 0 18px 48px rgb(16 44 75 / 11%);
   }
 
   .tab {
@@ -405,11 +420,11 @@ export default {
     line-height: 1.55;
   }
 
-  .signup-hero,
-  .auth-tabs,
-  .signup-footer {
+  .signup-hero {
     display: none;
   }
+
+  .desktop-top-action { display: none; }
 
   .signup-card {
     box-sizing: border-box;
@@ -424,7 +439,7 @@ export default {
 
   .signup-form {
     gap: 18px;
-    margin-top: 0;
+    margin-top: 22px;
   }
 
   .form-group {
@@ -558,4 +573,5 @@ export default {
     margin-top: 6px;
   }
 }
+
 </style>

@@ -1,87 +1,165 @@
 <template>
-  <div class="workspace-shell">
-    <aside class="sidebar">
-      <div class="brand-lockup">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.25"/><path d="M12 7v5l3.4 2"/></svg>
-        </span>
-        <span>Admin Dashboard</span>
-      </div>
-
-      <nav class="side-navigation" aria-label="Main navigation">
-        <a class="nav-item" href="#page-1">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10.5 8.5-7 8.5 7"/><path d="M5.5 9.5v10h5v-6h3v6h5v-10"/></svg>
-          <span>Home</span>
-        </a>
-        <a class="nav-item" href="#page-2">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>
-          <span>My Times</span>
-        </a>
-        <a class="nav-item" href="#page-3">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="15" rx="2"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/></svg>
-          <span>Schedule</span>
-        </a>
-        <a class="nav-item" href="#page-4">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c.5-3.2 3.4-5.3 7.5-5.3s7 2.1 7.5 5.3"/></svg>
-          <span>Profile</span>
-        </a>
-      </nav>
-
-      <button class="sidebar-logout" @click="disconnect">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10M14 8l4 4-4 4M8 12h10"/></svg>
-        <span>Log out</span>
-      </button>
-    </aside>
-
-    <main class="page-content">
-      <section id="page-1" class="page-placeholder">Page 1</section>
-      <section id="page-2" class="page-placeholder">Page 2</section>
-      <section id="page-3" class="page-placeholder">Page 3</section>
-      <section id="page-4" class="page-placeholder profile-page">
-        <div class="page-heading">
+  <AppShell :navigation="navigation" :active-tab="activeSection" @navigate="navigateSection" @logout="disconnect">
+      <div id="users" class="admin-content">
+        <div v-if="activeSection !== 'profile'" class="page-intro">
           <div>
-            <p class="eyebrow">Account details</p>
-            <h1>Profile</h1>
-            <p class="date-line">Your Time Manager account information.</p>
+            <p class="admin-eyebrow">PEOPLE &amp; ACCESS</p>
+            <h1>{{ activeSection === 'teams' ? 'Teams' : 'User Management' }}</h1>
+            <p v-if="activeSection === 'teams'" class="intro-copy">Managers and their assigned employees.</p>
+            <p v-if="activeSection !== 'teams'" class="intro-copy">Manage your team, roles, and access in one place.</p>
           </div>
         </div>
-        <article class="profile-card">
-          <span class="profile-avatar">{{ initials }}</span>
-          <div>
-            <h2>{{ displayName }}</h2>
-            <p>{{ profile.email || 'Email not available' }}</p>
-            <span class="profile-role">Admin</span>
+
+        <div v-if="activeSection !== 'profile' && usersError" class="inline-notice error-notice" role="alert">{{ usersError }}</div>
+
+        <section v-if="activeSection === 'teams'" id="teams" class="teams-section" aria-label="Manager teams">
+          <div v-if="loadingUsers" class="teams-empty">Loading teams…</div>
+          <div v-else-if="managerTeams.length === 0" class="teams-empty">No managers are registered yet.</div>
+          <div v-else class="teams-grid">
+            <article v-for="team in managerTeams" :key="team.manager.id" class="team-card">
+              <header class="team-manager"><InitialAvatar tone="tone-lilac" :initials="team.manager.initials" /><span class="user-identity"><strong>{{ team.manager.name }}</strong><small>{{ team.manager.email }}</small></span><span class="role-badge role-manager">Manager</span></header>
+              <div class="team-members-heading"><span>TEAM MEMBERS</span><span class="count-pill">{{ team.employees.length }}</span></div>
+              <ul v-if="team.employees.length" class="team-members">
+                <li v-for="employee in team.employees" :key="employee.id"><InitialAvatar :tone="employee.avatarTone" :initials="employee.initials" /><span class="user-identity"><strong>{{ employee.name }}</strong><small>{{ employee.email }}</small></span><span class="status-badge" :class="employee.status === 'Active' ? 'status-active' : 'status-inactive'"><i></i>{{ employee.status }}</span></li>
+              </ul>
+              <p v-else class="team-empty-members">No employees assigned yet.</p>
+            </article>
           </div>
-        </article>
-        <button class="profile-logout" @click="disconnect">Log out</button>
-      </section>
-    </main>
-  </div>
+          <article v-if="unassignedEmployees.length" class="unassigned-card"><h3>Unassigned employees <span class="count-pill">{{ unassignedEmployees.length }}</span></h3><ul class="team-members"><li v-for="employee in unassignedEmployees" :key="employee.id"><InitialAvatar :tone="employee.avatarTone" :initials="employee.initials" /><span class="user-identity"><strong>{{ employee.name }}</strong><small>{{ employee.email }}</small></span><span class="status-badge" :class="employee.status === 'Active' ? 'status-active' : 'status-inactive'"><i></i>{{ employee.status }}</span></li></ul></article>
+        </section>
+
+        <section v-if="activeSection === 'users'" class="users-panel" aria-labelledby="users-heading">
+          <div class="panel-heading">
+            <div><h2 id="users-heading">All users <span class="count-pill">{{ filteredUsers.length }}</span></h2><p>View and manage your workspace members.</p></div>
+          </div>
+          <div class="table-toolbar">
+            <label class="search-box"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input v-model="searchQuery" type="search" placeholder="Search by name or email…" aria-label="Search users" /></label>
+            <label class="filter-select"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg><select v-model="statusFilter" aria-label="Filter by status"><option value="All">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select><svg class="select-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></label>
+            <button class="filter-role" :class="{ selected: roleFilter !== 'All' }" @click="roleFilter = roleFilter === 'All' ? 'Manager' : roleFilter === 'Manager' ? 'Employee' : 'All'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg><span>{{ roleFilter === 'All' ? 'All roles' : roleFilter }}</span><svg class="select-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button>
+          </div>
+
+          <div class="table-scroll">
+            <table class="users-table">
+              <thead><tr><th scope="col" class="user-column">USER <button aria-label="Sort users">↕</button></th><th scope="col">ROLE</th><th scope="col">STATUS</th><th scope="col">JOINED DATE <button aria-label="Sort by joined date">↕</button></th><th scope="col" class="actions-heading">ACTION</th></tr></thead>
+              <tbody>
+                <tr v-for="user in filteredUsers" :key="user.email">
+                  <td class="user-cell"><InitialAvatar :tone="user.avatarTone" :initials="user.initials" /><span class="user-identity"><strong>{{ user.name }}</strong><small>{{ user.email }}</small></span></td>
+                  <td data-label="Role"><span class="role-badge" :class="roleClass(user.role)"><svg v-if="user.role === 'Admin'" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 18 1.2-8 4.1 3.4L12 6l1.7 7.4 4.1-3.4L19 18H5ZM5 21h14"/></svg><svg v-else-if="user.role === 'Manager'" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 6v5.5c0 4.2-2.9 7.5-7 9-4.1-1.5-7-4.8-7-9V6l7-2.5Z"/><path d="m9 12 2 2 4-4"/></svg><svg v-else viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>{{ user.role }}</span></td>
+                  <td data-label="Status"><span class="status-badge" :class="user.status === 'Active' ? 'status-active' : 'status-inactive'"><i></i>{{ user.status }}</span></td>
+                  <td class="joined-cell" data-label="Joined">{{ user.joined }}</td>
+                  <td class="action-cell" data-label="Actions"><div class="action-buttons"><button class="manage-button" :disabled="user.actionBusy" @click="openRoleEditor(user)">Edit role</button><button class="user-action-button" :class="user.status === 'Active' ? 'suspend-button' : 'activate-button'" :disabled="user.actionBusy || isCurrentUser(user)" :title="isCurrentUser(user) ? 'You cannot change your own administrator account status' : user.status === 'Active' ? 'Suspend this account' : 'Activate this account'" @click="toggleUserStatus(user)">{{ user.actionBusy ? 'Saving…' : user.status === 'Active' ? 'Suspend' : 'Activate' }}</button><button class="user-action-button delete-button" :disabled="user.actionBusy || isCurrentUser(user)" :title="isCurrentUser(user) ? 'You cannot delete your own administrator account' : 'Delete this account'" @click="deleteUser(user)">{{ user.actionBusy ? 'Saving…' : 'Delete' }}</button></div></td>
+                </tr>
+                <tr v-if="loadingUsers"><td colspan="5" class="empty-row">Loading users…</td></tr>
+                <tr v-else-if="filteredUsers.length === 0"><td colspan="5" class="empty-row">{{ searchQuery || statusFilter !== 'All' || roleFilter !== 'All' ? 'No users match your filters.' : 'No users to display yet.' }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section v-if="activeSection === 'profile'" class="admin-profile-section" aria-labelledby="profile-heading">
+          <div class="profile-page-heading"><p class="admin-eyebrow">ACCOUNT DETAILS</p><h2 id="profile-heading">Profile</h2><p>Your Time Manager account information.</p></div>
+          <article class="card profile-card"><span class="profile-avatar">{{ initials }}</span><div><h3>{{ displayName }}</h3><p>{{ profile.email || 'Email not available' }}</p><span class="profile-role">Administrator</span></div></article>
+          <button class="profile-logout" type="button" @click="disconnect">Log out</button>
+        </section>
+      </div>
+    <Transition name="drawer-fade">
+      <div v-if="editingUser" class="drawer-backdrop" @click.self="closeRoleEditor" @keydown.esc="closeRoleEditor">
+        <aside class="role-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+          <header class="drawer-header"><div><p class="drawer-eyebrow">TEAM ACCESS</p><h2 id="drawer-title">Edit user role</h2><p>Update this member’s workspace permissions.</p></div><button class="drawer-close" aria-label="Close role editor" @click="closeRoleEditor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+          <div class="drawer-body">
+            <section class="drawer-user-summary"><InitialAvatar variant="drawer-avatar" :tone="editingUser.avatarTone" :initials="editingUser.initials" /><span><strong>{{ editingUser.name }}</strong><small>{{ editingUser.email }}</small></span><span class="role-badge" :class="roleClass(editingUser.role)">{{ editingUser.role }}</span></section>
+            <fieldset class="role-fieldset"><legend>Choose a role</legend><p class="field-hint">Roles determine what this person can see and manage.</p>
+              <label v-for="role in roleOptions" :key="role.name" class="role-option" :class="{ 'role-option-selected': selectedRole === role.name }"><input v-model="selectedRole" type="radio" :value="role.name" /><span class="role-option-icon" :class="role.iconTone"><svg v-if="role.name === 'Admin'" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 6v5.5c0 4.2-2.9 7.5-7 9-4.1-1.5-7-4.8-7-9V6l7-2.5Z"/><path d="m9 12 2 2 4-4"/></svg><svg v-else-if="role.name === 'Manager'" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.5a3.2 3.2 0 0 1 0 6.2M17 14a5 5 0 0 1 3.5 4.8"/></svg><svg v-else viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></span><span class="role-option-copy"><strong>{{ role.name }}</strong><small>{{ role.description }}</small></span><span class="custom-radio"></span></label>
+            </fieldset>
+            <div class="privilege-note" :class="{ 'privilege-note-admin': selectedRole === 'Admin', 'privilege-note-manager': selectedRole === 'Manager' }"><span class="privilege-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 6v5.5c0 4.2-2.9 7.5-7 9-4.1-1.5-7-4.8-7-9V6l7-2.5Z"/><path d="m9 12 2 2 4-4"/></svg></span><span><strong>{{ selectedRole === 'Admin' ? 'Full workspace access' : selectedRole === 'Manager' ? 'Team management access' : 'Standard member access' }}</strong><small>{{ selectedRole === 'Admin' ? 'Admins can manage roles, teams, schedules, and workspace settings.' : selectedRole === 'Manager' ? 'Managers can manage their team and view team time records.' : 'Members can track their own time and update their profile.' }}</small></span></div>
+            <label class="confirm-toggle"><input v-model="confirmRoleChange" type="checkbox" /><span class="toggle-track"><i></i></span><span>I understand this role changes the user’s access.</span></label>
+          </div>
+          <footer class="drawer-footer"><button class="cancel-button" @click="closeRoleEditor">Cancel</button><button class="save-role-button" :disabled="!confirmRoleChange || savingRole" @click="saveRoleChange"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.2 4.2L19 6.5"/></svg>{{ savingRole ? 'Saving…' : 'Save role changes' }}</button></footer>
+        </aside>
+      </div>
+    </Transition>
+  </AppShell>
 </template>
 
 <script>
 import api from '../api'
+import { getAvatarTone, getDisplayName, getInitials } from '../utils/identity'
+import InitialAvatar from './InitialAvatar.vue'
+import AppShell from './AppShell.vue'
 
 export default {
   name: 'AdminDashboard',
+  components: { AppShell, InitialAvatar },
   data() {
     return {
-      userId: localStorage.getItem('userId'),
-      profile: {}
+      userId: sessionStorage.getItem('userId'),
+      profile: {},
+      users: [],
+      loadingUsers: true,
+      usersError: '',
+      savingRole: false,
+      searchQuery: '',
+      statusFilter: 'All',
+      roleFilter: 'All',
+      activeSection: 'teams',
+      editingUser: null,
+      selectedRole: 'Employee',
+      confirmRoleChange: false,
+      roleOptions: [
+        { name: 'Employee', description: 'Tracks personal time and manages own profile.', iconTone: 'option-member' },
+        { name: 'Manager', description: 'Manages a team and reviews team activity.', iconTone: 'option-manager' },
+        { name: 'Admin', description: 'Controls workspace settings and access.', iconTone: 'option-admin' }
+      ]
     }
   },
   computed: {
+    navigation() {
+      return [
+        { key: 'teams', label: 'Teams', icon: 'teams' },
+        { key: 'users', label: 'User management', icon: 'users' },
+        { key: 'profile', label: 'Profile', icon: 'profile' }
+      ]
+    },
     displayName() {
-      return this.profile.username || this.profile.name || 'Welcome'
+      return getDisplayName(this.profile, 'Admin User')
     },
     initials() {
-      return this.displayName.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'TM'
+      return getInitials(this.displayName, 'AD')
+    },
+    filteredUsers() {
+      const query = this.searchQuery.trim().toLowerCase()
+      const roleOrder = { Admin: 0, Manager: 1, Employee: 2 }
+      return this.users.filter((user) => {
+        const matchesQuery = !query || `${user.name} ${user.email}`.toLowerCase().includes(query)
+        const matchesStatus = this.statusFilter === 'All' || user.status === this.statusFilter
+        const matchesRole = this.roleFilter === 'All' || user.role === this.roleFilter
+        return matchesQuery && matchesStatus && matchesRole
+      }).sort((first, second) => {
+        const roleDifference = (roleOrder[first.role] ?? 3) - (roleOrder[second.role] ?? 3)
+        return roleDifference || first.name.localeCompare(second.name)
+      })
+    },
+    managerTeams() {
+      return this.users
+        .filter((user) => user.role === 'Manager')
+        .sort((first, second) => first.name.localeCompare(second.name))
+        .map((manager) => ({
+          manager,
+          employees: this.users.filter((user) => user.role === 'Employee' && String(user.managerId) === String(manager.id))
+        }))
+    },
+    unassignedEmployees() {
+      return this.users.filter((user) => user.role === 'Employee' && !user.managerId)
     }
   },
   mounted() {
     this.loadProfile()
+    this.loadUsers()
   },
   methods: {
+    navigateSection(section) {
+      this.activeSection = section
+    },
     async loadProfile() {
       if (!this.userId) return
       try {
@@ -91,13 +169,102 @@ export default {
         console.error('Could not load profile:', error)
       }
     },
+    async loadUsers() {
+      this.loadingUsers = true
+      this.usersError = ''
+      try {
+        const response = await api.get('/users')
+        this.users = (response.data.data || []).map((user, index) => {
+          const name = getDisplayName(user, 'Unnamed user')
+          const initials = getInitials(name, 'U')
+          return {
+            ...user,
+            managerId: user.manager_id,
+            name,
+            initials,
+            role: { admin: 'Admin', manager: 'Manager', employee: 'Employee' }[user.role] || 'Employee',
+            status: user.status === 'inactive' ? 'Inactive' : 'Active',
+            joined: user.joined_at ? new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: '2-digit', timeZone: 'UTC' }).format(new Date(user.joined_at)) : '—',
+            avatarTone: getAvatarTone(index)
+          }
+        })
+      } catch (error) {
+        this.usersError = error.response?.status === 403
+          ? 'Admin access is required to view workspace users.'
+          : 'Could not load users. Please try again.'
+      } finally {
+        this.loadingUsers = false
+      }
+    },
+    roleClass(role) {
+      return { Admin: 'role-admin', Manager: 'role-manager', Employee: 'role-member' }[role] || 'role-member'
+    },
+    isCurrentUser(user) {
+      return String(user.id) === String(this.userId)
+    },
+    openRoleEditor(user) {
+      this.editingUser = user
+      this.selectedRole = user.role
+      this.confirmRoleChange = false
+    },
+    closeRoleEditor() {
+      this.editingUser = null
+      this.confirmRoleChange = false
+    },
+    async saveRoleChange() {
+      if (!this.editingUser || !this.confirmRoleChange || this.savingRole) return
+      this.savingRole = true
+      this.usersError = ''
+      try {
+        const role = { Admin: 'admin', Manager: 'manager', Employee: 'employee' }[this.selectedRole]
+        await api.patch(`/users/${this.editingUser.id}`, { user: { role } })
+        this.editingUser.role = this.selectedRole
+        this.closeRoleEditor()
+      } catch (error) {
+        this.usersError = error.response?.status === 403
+          ? 'Admin access is required to change a user role.'
+          : 'Could not save this role change. Please try again.'
+      } finally {
+        this.savingRole = false
+      }
+    },
+    async toggleUserStatus(user) {
+      if (user.actionBusy || this.isCurrentUser(user)) return
+      const nextStatus = user.status === 'Active' ? 'Inactive' : 'Active'
+      user.actionBusy = true
+      this.usersError = ''
+      try {
+        await api.patch(`/users/${user.id}`, { user: { status: nextStatus.toLowerCase() } })
+        user.status = nextStatus
+      } catch (error) {
+        this.usersError = error.response?.data?.error || 'Could not update this account status. Please try again.'
+      } finally {
+        user.actionBusy = false
+      }
+    },
+    async deleteUser(user) {
+      if (user.actionBusy || this.isCurrentUser(user)) return
+      const confirmed = window.confirm(`Delete ${user.name} (${user.email}) and their clock and work-time records permanently? This cannot be undone.`)
+      if (!confirmed) return
+
+      user.actionBusy = true
+      this.usersError = ''
+      try {
+        await api.delete(`/users/${user.id}`)
+        this.users = this.users.filter((currentUser) => currentUser.id !== user.id)
+      } catch (error) {
+        this.usersError = error.response?.data?.error || 'Could not delete this user. Please try again.'
+      } finally {
+        user.actionBusy = false
+      }
+    },
     async disconnect() {
       try {
         await api.post('/users/sign_out')
       } catch (error) {
         console.error('Logout error:', error)
       } finally {
-        localStorage.clear()
+        sessionStorage.clear()
         this.$router.push('/login')
       }
     }
@@ -106,51 +273,448 @@ export default {
 </script>
 
 <style scoped>
-.workspace-shell { --accent: var(--app-accent); --ink: var(--app-text); display: grid; min-height: 100vh; grid-template-columns: 248px minmax(0, 1fr); color: var(--ink); background: var(--app-background); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; }
-.sidebar { position: sticky; top: 0; display: flex; height: 100vh; flex-direction: column; padding: 24px 16px; color: #fff; background: #102c4b; }
-.brand-lockup { display: flex; min-height: 54px; align-items: center; gap: 12px; padding: 0 8px; font-size: 18px; font-weight: 700; }
-.brand-mark { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border-radius: 12px; background: var(--accent); }
-.brand-mark svg { width: 24px; stroke: #fff; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
-.side-navigation { display: grid; gap: 7px; margin-top: 42px; }
-.nav-item { display: flex; min-height: 48px; align-items: center; gap: 13px; padding: 0 14px; border-radius: 12px; color: #aebed0; text-decoration: none; font-size: 14px; }
-.nav-item:hover, .nav-item:focus-visible { color: #f2f8ff; background: #183d62; outline: none; }
-.nav-item svg { width: 19px; height: 19px; flex: 0 0 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
-.sidebar-logout { display: flex; align-items: center; gap: 12px; margin: auto 0 4px; padding: 12px 14px; border: 0; color: #adbdce; background: none; text-align: left; font: inherit; cursor: pointer; }
-.sidebar-logout:hover, .sidebar-logout:focus-visible { color: #fff; outline: none; }
-.sidebar-logout svg { width: 19px; height: 19px; flex: 0 0 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
-.page-content { display: grid; min-width: 0; min-height: 100vh; place-items: center; padding: 32px; }
-.page-placeholder { display: none; font-size: 24px; font-weight: 600; }
-.page-placeholder:first-child { display: block; }
-.page-content:has(.page-placeholder:target) .page-placeholder { display: none; }
-.page-content:has(.page-placeholder:target) .page-placeholder:target { display: block; }
-.page-content:has(#page-4:target) { display: block; padding: 36px clamp(28px, 4vw, 64px) 52px; }
-.profile-page { width: min(100%, 1500px); margin: 0 auto; font-size: 14px; font-weight: 400; }
-.page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 26px; }
-.eyebrow { margin: 0 0 7px; color: #8b929d; font-size: 12px; font-weight: 650; text-transform: uppercase; }
-.page-heading h1 { margin: 0; color: #20242c; font-size: clamp(26px, 3vw, 34px); font-weight: 720; }
-.date-line { margin: 8px 0 0; color: #8b929d; font-size: 14px; }
-.profile-card { display: flex; align-items: center; gap: 18px; padding: 24px; border: 1px solid #eceef2; border-radius: 20px; background: #fff; box-shadow: 0 6px 20px rgb(27 41 61 / 5%); }
-.profile-avatar { display: grid; width: 62px; height: 62px; flex: 0 0 62px; place-items: center; border-radius: 50%; color: #fff; background: var(--accent); font-size: 19px; font-weight: 700; }
-.profile-card h2 { margin: 0 0 6px; font-size: 18px; }
-.profile-card p { margin: 0; color: #89919c; font-size: 14px; }
+.admin-content {
+  --admin-ink: var(--app-text);
+  --admin-muted: var(--app-muted);
+  --admin-faint: #929dad;
+  --admin-line: var(--app-border);
+  --admin-surface: var(--app-surface);
+  --admin-canvas: var(--app-background);
+  --admin-primary: var(--app-accent);
+  color: var(--admin-ink);
+  font-family: inherit;
+  font-size: 14px;
+}
+.stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin: 0 0 18px; }
+.stat-card { min-width: 0; padding: 16px 18px; border: 1px solid var(--app-border); border-radius: 12px; background: var(--app-surface); box-shadow: 0 3px 12px rgb(22 34 52 / 3%); }
+.stat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stat-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; }
+.stat-icon svg { width: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.stat-icon-violet { color: #6657d9; background: #efedff; }
+.stat-icon-green { color: #17976f; background: #e8f8f1; }
+.stat-icon-blue { color: #3b78d4; background: #e9f2ff; }
+.stat-icon-amber { color: #b98227; background: #fff5df; }
+.stat-card > strong { display: block; color: var(--app-text); font-size: 25px; font-weight: 730; letter-spacing: -.5px; }
+.stat-label { display: block; margin-top: 3px; color: var(--app-muted); font-size: 12px; }
+.admin-profile-section { max-width: 720px; }
+.profile-page-heading { margin-bottom: 20px; }
+.profile-page-heading h2 { margin: 0; color: var(--app-text); font-size: 28px; letter-spacing: -.6px; }
+.profile-page-heading > p:last-child { margin: 6px 0 0; color: var(--app-muted); font-size: 14px; }
+.profile-card { display: flex; align-items: center; gap: 18px; padding: 24px; border: 1px solid var(--app-border); border-radius: var(--app-radius-panel); background: var(--app-surface); box-shadow: var(--app-shadow-profile); }
+.profile-avatar { display: grid; width: 62px; height: 62px; flex: 0 0 62px; place-items: center; border-radius: 50%; color: #fff; background: var(--app-accent); font-size: 19px; font-weight: 700; }
+.profile-card h3 { margin: 0 0 6px; color: var(--app-text); font-size: 18px; }
+.profile-card p { margin: 0; color: var(--app-muted); font-size: 14px; }
 .profile-role { display: inline-block; margin-top: 10px; padding: 5px 9px; border-radius: 999px; color: var(--app-accent-strong); background: var(--app-accent-soft); font-size: 11px; font-weight: 650; }
-.profile-logout { min-height: 44px; margin-top: 16px; padding: 0 17px; border: 1px solid #e1e4e9; border-radius: 11px; color: #48515c; background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.profile-logout { min-height: 44px; margin-top: 16px; padding: 0 17px; border: 1px solid var(--app-border); border-radius: 11px; color: #48515c; background: var(--app-surface); font: inherit; font-weight: 600; cursor: pointer; transition: background .16s ease, border-color .16s ease; }
+.profile-logout:hover, .profile-logout:focus-visible { border-color: #d2d8e2; background: #f7f9fc; outline: none; }
+.admin-content { width: 100%; margin: 0; padding: 0; }
+.page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
+.admin-eyebrow { margin: 0 0 8px; color: #818da0; font-size: 9px; font-weight: 750; letter-spacing: 1.2px; }
+.page-intro h1 { margin: 0; color: #192432; font-size: clamp(24px, 2.2vw, 30px); font-weight: 740; letter-spacing: -.9px; }
+.intro-copy { margin: 7px 0 0; color: #7b8797; font-size: 12px; }
+.inline-notice { margin: -10px 0 18px; padding: 10px 13px; border: 1px solid #dfe4fb; border-radius: 8px; color: #4959bd; background: #f3f5ff; font-size: 11px; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; margin-bottom: 19px; }
+.stat-card { min-width: 0; padding: 14px 16px 15px; border: 1px solid #e8ecf2; border-radius: 10px; background: #fff; box-shadow: 0 2px 7px rgb(25 38 60 / 2%); }
+.stat-top { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-bottom: 12px; }
+.stat-icon { display: grid; width: 29px; height: 29px; place-items: center; border-radius: 8px; }
+.stat-icon svg { width: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.stat-icon-violet { color: #6657d9; background: #efedff; }
+.stat-icon-green { color: #17976f; background: #e8f8f1; }
+.stat-icon-blue { color: #3b78d4; background: #e9f2ff; }
+.stat-icon-amber { color: #b98227; background: #fff5df; }
+.stat-change { color: #188460; font-size: 9px; font-weight: 650; }
+.stat-change i { font-size: 11px; font-style: normal; }
+.stat-period { overflow: hidden; color: #969faf; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.stat-card > strong { display: block; color: #202b3a; font-size: 23px; font-weight: 730; letter-spacing: -.5px; }
+.stat-label { display: block; margin-top: 3px; color: #7f8a9a; font-size: 10px; }
+.teams-section { margin: 0 0 20px; }
+.teams-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin: 3px 0 14px; }
+.teams-heading h2 { margin: 0; color: #202b3a; font-size: 18px; font-weight: 720; letter-spacing: -.35px; }
+.teams-heading p:last-child { margin: 5px 0 0; color: #7f8a9a; font-size: 11px; }
+.teams-total { padding: 7px 10px; border: 1px solid #e8ecf2; border-radius: 8px; color: #697587; background: #fff; font-size: 10px; }
+.teams-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.team-card, .unassigned-card { min-width: 0; padding: 16px; border: 1px solid #e6eaf0; border-radius: 11px; background: #fff; box-shadow: 0 3px 12px rgb(22 34 52 / 3%); }
+.team-manager { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #eef0f4; }
+.team-manager .role-badge { margin-left: auto; }
+.team-members-heading { display: flex; align-items: center; gap: 8px; margin: 14px 0 3px; color: #8994a3; font-size: 8px; font-weight: 750; letter-spacing: .8px; }
+.team-members { margin: 0; padding: 0; list-style: none; }
+.team-members li { display: flex; min-width: 0; align-items: center; gap: 9px; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
+.team-members li:last-child { border-bottom: 0; }
+.team-members .user-avatar { width: 29px; height: 29px; flex-basis: 29px; }
+.team-members .user-identity { min-width: 0; }
+.team-members .user-identity strong, .team-members .user-identity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-members .status-badge { margin-left: auto; }
+.team-empty-members, .teams-empty { margin: 0; padding: 18px 0; color: #8994a3; font-size: 11px; }
+.teams-empty { padding: 25px; border: 1px dashed #dfe4eb; border-radius: 10px; background: #fff; text-align: center; }
+.unassigned-card { margin-top: 14px; }
+.unassigned-card h3 { display: flex; align-items: center; gap: 8px; margin: 0; color: #354052; font-size: 12px; }
+.users-panel { overflow: hidden; border: 1px solid #e6eaf0; border-radius: 11px; background: #fff; box-shadow: 0 3px 12px rgb(22 34 52 / 3%); }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 19px 20px 15px; }
+.panel-heading h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: #273243; font-size: 14px; font-weight: 700; }
+.panel-heading p { margin: 5px 0 0; color: #8a95a4; font-size: 10px; }
+.count-pill { padding: 3px 7px; border-radius: 999px; color: #626f80; background: #f0f2f5; font-size: 9px; font-weight: 650; }
+.table-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 20px 13px; }
+.search-box, .filter-select, .filter-role { display: flex; min-height: 33px; align-items: center; gap: 8px; border: 1px solid #e4e8ee; border-radius: 7px; color: #7b8798; background: #fff; }
+.search-box { width: min(100%, 290px); padding: 0 9px; }
+.search-box:focus-within { border-color: #8992e7; box-shadow: 0 0 0 3px rgb(70 87 216 / 9%); }
+.search-box svg, .filter-select > svg:first-child, .filter-role > svg:first-child { width: 15px; flex: 0 0 15px; fill: none; stroke: #929cad; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.search-box input { width: 100%; min-width: 0; border: 0; outline: 0; color: #354153; background: transparent; font: inherit; font-size: 10px; }
+.search-box input::placeholder { color: #a1a9b5; }
+.filter-select, .filter-role { position: relative; min-width: 120px; padding: 0 9px; }
+.filter-select select { width: 100%; appearance: none; border: 0; outline: 0; color: #566274; background: transparent; font: inherit; font-size: 10px; cursor: pointer; }
+.select-chevron { width: 13px; flex: 0 0 13px; fill: none; stroke: #959eac; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; pointer-events: none; }
+.filter-role { min-width: 103px; justify-content: space-between; font: inherit; font-size: 10px; cursor: pointer; transition: background .16s ease; }
+.filter-role:hover, .filter-role.selected { background: #f8f9ff; }
+.table-scroll { width: 100%; overflow-x: auto; }
+.users-table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+.users-table thead { background: #fafbfc; }
+.users-table th { height: 34px; padding: 0 13px; border-top: 1px solid #eef0f4; border-bottom: 1px solid #eef0f4; color: #8994a3; font-size: 8px; font-weight: 750; letter-spacing: .75px; }
+.users-table th:first-child, .users-table td:first-child { padding-left: 20px; }
+.users-table th button { margin-left: 4px; border: 0; color: #a9b0bd; background: none; font: inherit; cursor: pointer; }
+.user-column { width: 39%; }
+.users-table td { height: 58px; padding: 0 13px; border-bottom: 1px solid #eff1f5; color: #556172; font-size: 10px; }
+.users-table tbody tr:last-child td { border-bottom: 0; }
+.users-table tbody tr { transition: background .14s ease; }
+.users-table tbody tr:hover { background: #fbfcfe; }
+.user-cell { display: flex; align-items: center; gap: 10px; }
+.user-avatar, .drawer-avatar { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; border: 1px solid rgb(35 49 70 / 5%); border-radius: 50%; font-size: 9px; font-weight: 700; }
+.user-identity { display: grid; gap: 4px; }
+.user-identity strong { color: #354153; font-size: 10px; font-weight: 650; }
+.user-identity small { color: #8b96a5; font-size: 9px; }
+.tone-lilac { color: #5d4db1; background: #efebff; }
+.tone-peach { color: #a95236; background: #fff0e8; }
+.tone-mint { color: #247458; background: #e7f7ef; }
+.tone-sky { color: #3869a5; background: #e8f2ff; }
+.tone-rose { color: #a94a70; background: #ffedf3; }
+.tone-gold { color: #8a6827; background: #fff5d9; }
+.tone-blue { color: #4260a9; background: #e8eeff; }
+.role-badge { display: inline-flex; min-height: 23px; align-items: center; gap: 5px; padding: 0 8px; border: 1px solid transparent; border-radius: 999px; font-size: 9px; font-weight: 650; }
+.role-badge svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.role-admin { border-color: #e7e1ff; color: #6551c8; background: #f3f0ff; }
+.role-manager { border-color: #d7e9ff; color: #3671b6; background: #eff7ff; }
+.role-member { border-color: #e5e8ed; color: #657082; background: #f5f6f8; }
+.status-badge { display: inline-flex; align-items: center; gap: 6px; color: #647181; font-size: 9px; }
+.status-badge i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status-active { color: #18835f; }
+.status-inactive { color: #9ba3af; }
+.joined-cell { color: #697587 !important; }
+.actions-heading { width: 235px; text-align: right; padding-right: 20px !important; }
+.action-cell { padding-right: 20px !important; }
+.action-buttons { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.manage-button { min-height: 27px; padding: 0 9px; border: 1px solid #e1e5ec; border-radius: 6px; color: #4e5a6b; background: #fff; font: inherit; font-size: 9px; font-weight: 620; cursor: pointer; transition: color .15s ease, border .15s ease, background .15s ease; }
+.manage-button:hover, .manage-button:focus-visible { border-color: #c9cef4; color: #4657d8; background: #f8f8ff; outline: none; }
+.user-action-button { min-height: 27px; padding: 0 8px; border: 1px solid transparent; border-radius: 6px; font: inherit; font-size: 9px; font-weight: 680; cursor: pointer; transition: background .15s ease, border .15s ease, opacity .15s ease; }
+.user-action-button:disabled, .manage-button:disabled { cursor: not-allowed; opacity: .52; }
+.suspend-button { border-color: #f0d58a; color: #87600b; background: #fff7df; }
+.suspend-button:hover:not(:disabled) { border-color: #e4c35b; background: #ffefbd; }
+.activate-button { border-color: #bfe4d4; color: #16734f; background: #eaf8f1; }
+.activate-button:hover:not(:disabled) { border-color: #91d1b5; background: #d9f2e6; }
+.delete-button { border-color: #f3c9c8; color: #b42323; background: #fff1f0; }
+.delete-button:hover:not(:disabled) { border-color: #e7aaa8; background: #ffe2df; }
+.empty-row { height: 90px !important; color: #8994a3 !important; text-align: center; }
+.drawer-backdrop { position: fixed; z-index: 20; inset: 0; display: flex; justify-content: flex-end; background: rgb(18 25 38 / 38%); backdrop-filter: blur(2px); }
+.role-drawer { display: flex; width: min(100%, 465px); height: 100%; flex-direction: column; background: #fff; box-shadow: -14px 0 40px rgb(19 28 44 / 13%); }
+.drawer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 25px 26px 19px; border-bottom: 1px solid #edf0f4; }
+.drawer-eyebrow { margin: 0 0 7px; color: #7685d8; font-size: 9px; font-weight: 750; letter-spacing: 1.1px; }
+.drawer-header h2 { margin: 0; color: #202b3a; font-size: 19px; font-weight: 720; letter-spacing: -.45px; }
+.drawer-header > div > p:last-child { margin: 6px 0 0; color: #8590a0; font-size: 11px; }
+.drawer-close { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #e7eaf0; border-radius: 7px; color: #788495; background: white; cursor: pointer; }
+.drawer-close:hover { color: #344054; background: #f6f7f9; }
+.drawer-close svg { width: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.8; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 21px 26px; }
+.drawer-user-summary { display: flex; align-items: center; gap: 10px; padding: 13px; border: 1px solid #e9edf3; border-radius: 9px; background: #fafbfc; }
+.drawer-avatar { width: 38px; height: 38px; flex-basis: 38px; font-size: 10px; }
+.drawer-user-summary > span:nth-child(2) { display: grid; min-width: 0; gap: 4px; }
+.drawer-user-summary > span:nth-child(2) strong { overflow: hidden; color: #344054; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.drawer-user-summary > span:nth-child(2) small { overflow: hidden; color: #8993a3; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.drawer-user-summary > .role-badge { margin-left: auto; white-space: nowrap; }
+.role-fieldset { min-width: 0; margin: 25px 0 0; padding: 0; border: 0; }
+.role-fieldset legend { margin: 0; color: #273243; font-size: 12px; font-weight: 700; }
+.field-hint { margin: 5px 0 12px; color: #8994a3; font-size: 10px; }
+.role-option { display: flex; min-height: 66px; align-items: center; gap: 10px; margin-top: 8px; padding: 10px 11px; border: 1px solid #e6eaf0; border-radius: 8px; cursor: pointer; transition: border .15s ease, background .15s ease, box-shadow .15s ease; }
+.role-option:hover { border-color: #cdd2f6; background: #fbfbff; }
+.role-option-selected { border-color: #777fe0; background: #f7f7ff; box-shadow: 0 0 0 2px rgb(70 87 216 / 8%); }
+.role-option > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.role-option:focus-within { outline: 3px solid rgb(70 87 216 / 17%); outline-offset: 2px; }
+.role-option-icon { display: grid; width: 33px; height: 33px; flex: 0 0 33px; place-items: center; border-radius: 8px; }
+.role-option-icon svg { width: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.65; }
+.option-member { color: #677486; background: #f0f2f5; }
+.option-manager { color: #3475bf; background: #eaf3ff; }
+.option-admin { color: #6653c7; background: #efecff; }
+.role-option-copy { display: grid; flex: 1; gap: 4px; }
+.role-option-copy strong { color: #344054; font-size: 10px; font-weight: 680; }
+.role-option-copy small { color: #8792a1; font-size: 9px; line-height: 1.45; }
+.custom-radio { display: grid; width: 16px; height: 16px; flex: 0 0 16px; place-items: center; border: 1px solid #cdd3dd; border-radius: 50%; background: white; }
+.role-option-selected .custom-radio { border: 5px solid #4657d8; }
+.privilege-note { display: flex; gap: 10px; margin-top: 18px; padding: 12px; border: 1px solid #dce7f7; border-radius: 8px; color: #405b84; background: #f2f7ff; }
+.privilege-note-admin { border-color: #e5defb; color: #6550ac; background: #f7f4ff; }
+.privilege-note-manager { border-color: #dce9f7; color: #405b84; background: #f2f7ff; }
+.privilege-icon { display: grid; width: 27px; height: 27px; flex: 0 0 27px; place-items: center; border-radius: 7px; background: rgb(255 255 255 / 75%); }
+.privilege-icon svg { width: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.privilege-note > span:last-child { display: grid; gap: 4px; }
+.privilege-note strong { color: inherit; font-size: 10px; font-weight: 700; }
+.privilege-note small { color: inherit; font-size: 9px; line-height: 1.5; opacity: .82; }
+.confirm-toggle { display: flex; align-items: center; gap: 9px; margin-top: 17px; color: #667284; font-size: 9px; line-height: 1.4; cursor: pointer; }
+.confirm-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.confirm-toggle input:focus-visible + .toggle-track { outline: 3px solid rgb(70 87 216 / 22%); outline-offset: 2px; }
+.toggle-track { position: relative; width: 30px; height: 17px; flex: 0 0 30px; border-radius: 99px; background: #cbd2dd; transition: background .18s ease; }
+.toggle-track i { position: absolute; top: 3px; left: 3px; width: 11px; height: 11px; border-radius: 50%; background: white; box-shadow: 0 1px 2px rgb(0 0 0 / 15%); transition: transform .18s ease; }
+.confirm-toggle input:checked + .toggle-track { background: #4657d8; }
+.confirm-toggle input:checked + .toggle-track i { transform: translateX(13px); }
+.drawer-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 26px; border-top: 1px solid #edf0f4; background: #fff; }
+.cancel-button, .save-role-button { display: inline-flex; min-height: 36px; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border-radius: 7px; font: inherit; font-size: 10px; font-weight: 650; cursor: pointer; transition: background .15s ease, border .15s ease, opacity .15s ease; }
+.cancel-button { border: 1px solid #e2e6ed; color: #5d6878; background: white; }
+.cancel-button:hover { background: #f8f9fb; }
+.save-role-button { border: 1px solid #4657d8; color: white; background: #4657d8; }
+.save-role-button:hover:not(:disabled) { background: #3949c1; }
+.save-role-button:disabled { cursor: not-allowed; opacity: .48; }
+.save-role-button svg { width: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.drawer-fade-enter-active, .drawer-fade-leave-active { transition: opacity .2s ease; }
+.drawer-fade-enter-active .role-drawer, .drawer-fade-leave-active .role-drawer { transition: transform .24s cubic-bezier(.22,.75,.25,1); }
+.drawer-fade-enter-from, .drawer-fade-leave-to { opacity: 0; }
+.drawer-fade-enter-from .role-drawer, .drawer-fade-leave-to .role-drawer { transform: translateX(30px); }
 
-@media (max-width: 700px) {
-  .workspace-shell { grid-template-columns: minmax(150px, 38vw) minmax(0, 1fr); }
-  .sidebar { padding: 20px 10px; }
-  .brand-lockup { gap: 8px; padding: 0 4px; font-size: 15px; }
-  .brand-mark { width: 34px; height: 34px; flex-basis: 34px; }
-  .nav-item { gap: 8px; padding: 0 8px; font-size: 13px; }
-  .page-content { padding: 16px; }
-  .page-content:has(#page-4:target) { padding: 24px 18px 30px; }
-  .page-heading { align-items: center; margin-bottom: 20px; }
-  .page-heading h1 { font-size: 27px; }
-  .eyebrow { font-size: 11px; }
-  .date-line { font-size: 13px; }
+/* Shared app theme: match the employee workspace palette and type scale. */
+.admin-content { padding: 0; }
+.admin-eyebrow { font-size: 10px; }
+.page-intro h1 { color: var(--app-text); font-size: clamp(28px, 3vw, 34px); letter-spacing: -.8px; }
+.intro-copy { color: var(--app-muted); font-size: 14px; }
+.stat-card { border-color: var(--app-border); border-radius: 12px; padding: 17px 18px; }
+.stat-card > strong { color: var(--app-text); font-size: 27px; }
+.stat-label { color: var(--app-muted); font-size: 12px; }
+.stat-period, .stat-change { font-size: 10px; }
+.users-panel, .team-card, .unassigned-card { border-color: var(--app-border); border-radius: 12px; }
+.panel-heading { padding: 20px 20px 16px; }
+.panel-heading h2 { color: var(--app-text); font-size: 16px; }
+.panel-heading p, .teams-heading p:last-child { color: var(--app-muted); font-size: 12px; }
+.teams-heading h2 { font-size: 20px; }
+.teams-total { font-size: 11px; }
+.team-manager .user-identity strong, .user-identity strong { font-size: 12px; }
+.team-manager .user-identity small, .user-identity small { font-size: 10px; }
+.team-members-heading { font-size: 9px; }
+.team-members li { padding: 12px 0; }
+.team-members .user-avatar { width: 34px; height: 34px; flex-basis: 34px; font-size: 10px; }
+.team-members .status-badge, .status-badge { font-size: 11px; }
+.table-toolbar { padding-bottom: 15px; }
+.search-box, .filter-select, .filter-role { min-height: 38px; border-color: var(--app-border); border-radius: 8px; }
+.search-box input, .filter-select select, .filter-role { font-size: 12px; }
+.search-box:focus-within { border-color: var(--app-accent); box-shadow: 0 0 0 3px rgb(22 132 248 / 12%); }
+.filter-role:hover, .filter-role.selected { background: var(--app-accent-soft); }
+.users-table thead { background: #f7f9f8; }
+.users-table th { height: 40px; border-color: var(--app-border); font-size: 10px; }
+.users-table td { height: 64px; font-size: 12px; }
+.user-avatar { width: 36px; height: 36px; flex-basis: 36px; font-size: 10px; }
+.role-badge { min-height: 25px; font-size: 10px; }
+.manage-button, .user-action-button { min-height: 32px; font-size: 10px; }
+.drawer-header h2 { font-size: 21px; }
+.drawer-header > div > p:last-child { font-size: 13px; }
+.drawer-user-summary > span:nth-child(2) strong { font-size: 13px; }
+.drawer-user-summary > span:nth-child(2) small, .field-hint { font-size: 11px; }
+.role-fieldset legend { font-size: 14px; }
+.role-option-copy strong { font-size: 12px; }
+.role-option-copy small, .privilege-note small { font-size: 11px; }
+.privilege-note strong { font-size: 12px; }
+.confirm-toggle { font-size: 11px; }
+.cancel-button, .save-role-button { min-height: 39px; font-size: 12px; }
+
+@media (max-width: 1050px) {
+  .users-table th, .users-table td { padding-right: 9px; padding-left: 9px; }
+  .users-table th:first-child, .users-table td:first-child { padding-left: 14px; }
+  .actions-heading, .action-cell { padding-right: 14px !important; }
+}
+@media (max-width: 760px) {
+  .stats-grid { gap: 10px; }
+  .stat-card { padding: 13px 14px; }
+  .stat-card > strong { font-size: 22px; }
+  .stat-label { font-size: 11px; }
+  .teams-heading { align-items: flex-start; flex-direction: column; }
+  .table-toolbar { flex-wrap: wrap; padding-right: 13px; padding-left: 13px; }
+  .search-box { flex: 1 1 100%; width: 100%; }
+  .panel-heading { padding-right: 13px; padding-left: 13px; }
+  .table-scroll { overflow: visible; padding: 0 10px 10px; }
+  .users-table { display: block; width: 100%; min-width: 0; white-space: normal; }
+  .users-table thead { display: none; }
+  .users-table tbody { display: grid; gap: 10px; }
+  .users-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; padding: 13px; border: 1px solid var(--app-border); border-radius: 11px; background: var(--app-surface); }
+  .users-table tbody tr:hover { background: var(--app-surface); }
+  .users-table td { display: block; height: auto; min-width: 0; padding: 0 !important; border: 0; font-size: 11px; }
+  .users-table td:first-child { grid-column: 1 / -1; padding: 0 !important; }
+  .users-table td:nth-child(2), .users-table td:nth-child(3) { display: grid; justify-items: start; gap: 5px; }
+  .users-table td:nth-child(2)::before, .users-table td:nth-child(3)::before, .users-table .joined-cell::before { color: var(--app-muted); content: attr(data-label); font-size: 9px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+  .users-table .joined-cell { display: grid; justify-items: start; gap: 5px; }
+  .users-table .action-cell { grid-column: 1 / -1; padding: 4px 0 0 !important; }
+  .action-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .manage-button, .user-action-button { min-width: 0; padding: 0 5px; font-size: 10px; }
+  .users-table tbody tr:has(.empty-row) { display: block; }
+  .users-table .empty-row { display: block; padding: 22px 8px !important; }
+}
+@media (max-width: 480px) {
+  .stats-grid { gap: 9px; }
+  .stat-card { padding: 12px; }
+  .stat-icon { width: 29px; height: 29px; }
+  .page-intro { align-items: flex-start; }
+  .page-intro h1 { font-size: 25px; }
+  .intro-copy { max-width: 300px; font-size: 13px; line-height: 1.5; }
+  .filter-select, .filter-role { flex: 1; min-width: 0; }
+  .panel-heading h2 { font-size: 13px; }
+  .role-drawer { width: 100%; }
+  .drawer-header { padding-right: 18px; padding-left: 18px; }
+  .drawer-body { padding-right: 18px; padding-left: 18px; }
+  .drawer-footer { padding-right: 18px; padding-left: 18px; }
+  .teams-total { white-space: normal; }
 }
 
-@media (max-width: 380px) {
-  .page-content:has(#page-4:target) { padding-right: 13px; padding-left: 13px; }
+/* Keep admin cards, controls, and tables aligned with the shared light workspace UI. */
+.admin-content { color: var(--app-text); }
+.page-intro h1 { letter-spacing: -.7px; }
+.page-intro { margin-bottom: 22px; }
+.stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+.stat-card { min-height: 124px; padding: 17px 18px; border-radius: 17px; box-shadow: var(--app-shadow-panel); }
+.stat-top { margin-bottom: 12px; }
+.stat-icon { width: 36px; height: 36px; border-radius: 11px; }
+.stat-icon svg { width: 19px; }
+.stat-card > strong { font-size: 25px; }
+.stat-label { font-size: 12px; }
+.teams-section { margin-top: 0; }
+.teams-heading h2 { font-size: 20px; }
+.teams-heading p:last-child { font-size: 12px; }
+.teams-total { border-radius: 10px; font-size: 11px; }
+.team-card, .unassigned-card, .users-panel { border-radius: 17px; box-shadow: var(--app-shadow-panel); }
+.team-card, .unassigned-card { padding: 19px; }
+.team-members-heading { font-size: 10px; }
+.team-members li { padding: 12px 0; }
+.team-members .user-avatar { width: 34px; height: 34px; flex-basis: 34px; }
+.team-members .user-identity strong { font-size: 12px; }
+.team-members .user-identity small { font-size: 10px; }
+.panel-heading { padding-top: 21px; }
+.panel-heading h2 { font-size: 16px; }
+.panel-heading p { font-size: 12px; }
+.search-box, .filter-select, .filter-role { min-height: 42px; border-radius: 10px; }
+.search-box input, .filter-select select, .filter-role { font-size: 12px; }
+.users-table th { height: 42px; font-size: 10px; }
+.users-table td { height: 64px; font-size: 12px; }
+.user-avatar { width: 38px; height: 38px; flex-basis: 38px; font-size: 11px; }
+.user-identity strong { font-size: 12px; }
+.user-identity small { font-size: 10px; }
+.role-badge { min-height: 27px; padding-inline: 10px; font-size: 11px; }
+.status-badge { font-size: 11px; }
+.manage-button, .user-action-button { min-height: 35px; padding-inline: 10px; border-radius: 9px; font-size: 11px; }
+
+/* Match the manager's team table surface and row rhythm while retaining admin controls. */
+.users-panel { border: 1px solid var(--app-border); border-radius: var(--app-radius-panel); background: var(--app-surface); box-shadow: var(--app-shadow-panel); }
+.panel-heading { padding: 18px 20px 8px; }
+.panel-heading h2 { color: var(--app-text); font-size: 16px; }
+.panel-heading p { color: var(--app-muted); font-size: 12px; }
+.table-toolbar { flex-wrap: wrap; gap: 8px; padding: 8px 20px 16px; border-bottom: 1px solid var(--app-border); }
+.search-box, .filter-select, .filter-role { min-height: 38px; border-color: var(--app-border); border-radius: 9px; background: var(--app-surface); }
+.users-table thead { background: var(--app-background); }
+.users-table th { height: 42px; border-color: var(--app-border); color: var(--app-muted); font-size: 10px; }
+.users-table td { height: 64px; border-color: var(--app-border); color: var(--app-text); font-size: 12px; }
+.users-table tbody tr:hover { background: #f8fbff; }
+.user-column { width: 34%; }
+.user-avatar { width: 36px; height: 36px; flex-basis: 36px; font-size: 10px; }
+.user-identity strong { color: var(--app-text); font-size: 12px; }
+.user-identity small { color: var(--app-muted); font-size: 10px; }
+.role-badge { min-height: 25px; font-size: 10px; }
+.status-badge { font-size: 11px; }
+.action-buttons { display: flex; align-items: center; gap: 6px; }
+.manage-button, .user-action-button { min-height: 34px; padding-inline: 10px; border-radius: 9px; font-size: 10px; }
+
+@media (max-width: 760px) {
+  .panel-heading { padding: 16px 14px 8px; }
+  .table-toolbar { padding: 8px 14px 14px; }
+  .users-panel { border-radius: 17px; }
+  .stats-grid { gap: 10px; }
+  .stat-card { min-height: 112px; padding: 14px; border-radius: 15px; }
+  .stat-icon { width: 32px; height: 32px; }
+  .stat-card > strong { font-size: 23px; }
+  .stat-label { font-size: 11px; }
+  .team-card, .unassigned-card { padding: 16px; }
+  .users-table tbody tr { gap: 10px 13px; padding: 15px; border-radius: 17px; box-shadow: 0 4px 13px rgb(27 41 61 / 4%); }
+  .users-table td { font-size: 12px; }
+  .users-table td:nth-child(2)::before, .users-table td:nth-child(3)::before, .users-table .joined-cell::before { font-size: 10px; }
+  .action-buttons { gap: 8px; }
+  .manage-button, .user-action-button { min-height: 38px; font-size: 11px; }
+  .teams-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stat-card { min-height: 104px; padding: 11px; }
+  .stat-card > strong { font-size: 21px; }
+  .stat-label { font-size: 10px; }
+  .team-manager { gap: 9px; }
+  .team-manager .user-identity strong { font-size: 12px; }
+  .team-manager .user-identity small { overflow-wrap: anywhere; white-space: normal; }
+  .search-box, .filter-select, .filter-role { min-height: 43px; }
+}
+
+/* Larger, clearer text and controls across administrator pages. */
+.page-intro { margin-bottom: 28px; }
+.admin-eyebrow { font-size: 11px; letter-spacing: 1.3px; }
+.page-intro h1 { font-size: clamp(32px, 3.2vw, 40px); }
+.intro-copy { font-size: 15px; line-height: 1.55; }
+.teams-section { font-size: 15px; }
+.team-card, .unassigned-card { padding: 24px; }
+.team-manager .user-avatar { width: 44px; height: 44px; flex-basis: 44px; font-size: 12px; }
+.team-manager .user-identity strong, .team-members .user-identity strong { font-size: 15px; }
+.team-manager .user-identity small, .team-members .user-identity small { font-size: 12px; }
+.role-badge { min-height: 30px; padding-inline: 12px; font-size: 12px; }
+.team-members-heading { margin-top: 17px; font-size: 12px; }
+.team-members li { gap: 12px; padding: 14px 0; }
+.team-members .user-avatar { width: 40px; height: 40px; flex-basis: 40px; font-size: 11px; }
+.status-badge { min-height: 26px; padding: 4px 10px; font-size: 12px; }
+.team-empty-members, .teams-empty { font-size: 14px; }
+.unassigned-card h3 { font-size: 16px; }
+.panel-heading { padding: 21px 22px 10px; }
+.panel-heading h2 { font-size: 19px; }
+.panel-heading p { font-size: 14px; }
+.table-toolbar { gap: 10px; padding: 10px 22px 18px; }
+.search-box, .filter-select, .filter-role { min-height: 46px; gap: 10px; padding-inline: 12px; }
+.search-box input, .filter-select select, .filter-role { font-size: 14px; }
+.search-box svg, .filter-select > svg:first-child, .filter-role > svg:first-child { width: 18px; flex-basis: 18px; }
+.users-table th { height: 48px; font-size: 12px; }
+.users-table td { height: 74px; font-size: 14px; }
+.user-avatar { width: 42px; height: 42px; flex-basis: 42px; font-size: 12px; }
+.user-identity strong { font-size: 14px; }
+.user-identity small { font-size: 12px; }
+.role-badge { min-height: 29px; font-size: 12px; }
+.status-badge { font-size: 12px; }
+.manage-button, .user-action-button { min-height: 40px; padding-inline: 12px; font-size: 12px; }
+.drawer-header { padding: 26px 28px 21px; }
+.drawer-body { padding: 24px 28px; }
+.drawer-footer { padding: 17px 28px; }
+.drawer-header h2 { font-size: 24px; }
+.drawer-header > div > p:last-child, .field-hint { font-size: 14px; }
+.role-fieldset legend { font-size: 16px; }
+.role-option { min-height: 74px; padding: 14px; }
+.role-option-copy strong, .privilege-note strong { font-size: 14px; }
+.role-option-copy small, .privilege-note small { font-size: 13px; }
+.confirm-toggle { font-size: 13px; }
+.cancel-button, .save-role-button { min-height: 46px; font-size: 14px; }
+.profile-page-heading h2 { font-size: 32px; }
+.profile-page-heading > p:last-child, .profile-card p { font-size: 16px; }
+.profile-card { padding: 28px; }
+.profile-card h3 { font-size: 21px; }
+.profile-logout { min-height: 50px; font-size: 15px; }
+
+@media (max-width: 760px) {
+  .team-card, .unassigned-card { padding: 19px; }
+  .panel-heading { padding: 17px 15px 9px; }
+  .table-toolbar { padding: 9px 15px 16px; }
+  .users-table tbody tr { gap: 12px 14px; padding: 17px; }
+  .users-table td { font-size: 13px; }
+  .users-table td:nth-child(2)::before, .users-table td:nth-child(3)::before, .users-table .joined-cell::before { font-size: 11px; }
+  .manage-button, .user-action-button { min-height: 42px; font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .page-intro h1 { font-size: 27px; }
+  .intro-copy { font-size: 14px; }
+  .team-card, .unassigned-card { padding: 16px; }
+  .team-manager .user-identity strong { font-size: 14px; }
+  .team-members .user-identity strong { font-size: 13px; }
+  .team-members .user-identity small { font-size: 11px; }
+  .action-buttons { gap: 6px; }
+  .manage-button, .user-action-button { padding-inline: 7px; font-size: 11px; }
 }
 </style>

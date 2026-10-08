@@ -23,7 +23,8 @@ defmodule TimeManagerWeb.ClockJSON do
     %{
       id: clock.id,
       time: clock.time,
-      status: clock.status
+      status: clock.status,
+      state: clock.state || if(clock.status, do: "working", else: "off")
     }
   end
 end

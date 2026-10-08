@@ -14,7 +14,7 @@ defmodule TimeManager.Clocks do
 
     Clock
     |> where([c], c.user_id == ^user_id)
-    |> order_by([c], desc: c.time)
+    |> order_by([c], desc: c.time, desc: c.id)
     |> limit(1)
     |> Repo.one()
   end

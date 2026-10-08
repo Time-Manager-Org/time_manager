@@ -11,21 +11,24 @@
 # and so on) as they will fail if something goes wrong.
 
 
-# Main admin that will promote users to manager or admin; no other way to add admins/managers right now.
-TimeManager.Repo.insert!(%TimeManager.Accounts.User{
-  username: "admin",
-  full_name: "Admin User",
-  email: "admin@company.com",
-  password_hash: Bcrypt.hash_pwd_salt("admin123"),   # Change password
-  role: :admin
-})
+# Local demo accounts. Seed only when the username is absent so this script can
+# be rerun without creating duplicate accounts or resetting existing passwords.
+unless TimeManager.Repo.get_by(TimeManager.Accounts.User, username: "admin") do
+  TimeManager.Repo.insert!(%TimeManager.Accounts.User{
+    username: "admin",
+    full_name: "Admin User",
+    email: "admin@company.com",
+    password_hash: Bcrypt.hash_pwd_salt("admin123"),
+    role: :admin
+  })
+end
 
-
-# Demo Manager just for testing
-TimeManager.Repo.insert!(%TimeManager.Accounts.User{
-  username: "test_manager",
-  full_name: "Test Manager",
-  email: "manager@company.com",
-  password_hash: Bcrypt.hash_pwd_salt("manager123"),    # Remove or change password
-  role: :manager
-})
+unless TimeManager.Repo.get_by(TimeManager.Accounts.User, username: "test_manager") do
+  TimeManager.Repo.insert!(%TimeManager.Accounts.User{
+    username: "test_manager",
+    full_name: "Test Manager",
+    email: "manager@company.com",
+    password_hash: Bcrypt.hash_pwd_salt("manager123"),
+    role: :manager
+  })
+end

@@ -21,8 +21,8 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('xsrfToken')
-  const role = localStorage.getItem('role') || 'employee'
+  const token = sessionStorage.getItem('xsrfToken')
+  const role = sessionStorage.getItem('role') || 'employee'
   const roleHome = { employee: '/', manager: '/manager', admin: '/admin' }
 
   if (to.meta.requiresAuth && !token) {

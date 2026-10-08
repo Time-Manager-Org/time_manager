@@ -7,8 +7,14 @@ defmodule TimeManagerWeb.WorkingtimeController do
   action_fallback TimeManagerWeb.FallbackController
 
   def index(conn, %{"userID" => user_id} = params) do
-    workingtime = Workingtimes.list_workingtime(user_id, params)
-    render(conn, :index, workingtime: workingtime)
+    if TimeManager.Accounts.can_access_user_data?(conn.assigns.current_user, user_id) do
+      workingtime = Workingtimes.list_workingtime(user_id, params)
+      render(conn, :index, workingtime: workingtime)
+    else
+      conn
+      |> put_status(:forbidden)
+      |> json(%{error: "You cannot view this user's working times"})
+    end
   end
 
   def create(conn, %{"userID" => user_id, "workingtime" => workingtime_params}) do

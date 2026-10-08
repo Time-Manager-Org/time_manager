@@ -13,7 +13,7 @@ api.interceptors.request.use((config) => {
   const publicEndpoints = ['/users/sign_in', '/users/sign_up'];
   const isPublicRoute = publicEndpoints.some(path => config.url.endsWith(path));
 
-  const token = localStorage.getItem('xsrfToken');
+  const token = sessionStorage.getItem('xsrfToken');
 
   if (!isPublicRoute && token && token !== 'undefined' && token !== 'null') {
     config.headers['x-xsrf-token'] = token;

@@ -11,6 +11,8 @@ defmodule TimeManager.Accounts.User do
     field :password, :string, virtual: true
     field :password_hash, :string
     field :role, Ecto.Enum, values: @roles, default: :employee
+    field :status, Ecto.Enum, values: [:active, :inactive], default: :active
+    field :manager_id, :id
 
     timestamps(type: :utc_datetime)
   end
@@ -24,6 +26,13 @@ defmodule TimeManager.Accounts.User do
     |> unique_constraint(:email)
     |> put_pass_hash()
     |> validate_inclusion(:role, @roles)
+  end
+
+  def role_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:role, :status])
+    |> validate_inclusion(:role, @roles)
+    |> validate_inclusion(:status, [:active, :inactive])
   end
 
   defp put_pass_hash(%Ecto.Changeset{valid?: true, changes: %{password: password}} = changeset) do

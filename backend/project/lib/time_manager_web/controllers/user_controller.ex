@@ -8,8 +8,22 @@ defmodule TimeManagerWeb.UserController do
 
   # include params in the index function to allow for filtering and pagination
   def index(conn, params) do
-    users = Accounts.list_users(params)
-    render(conn, :index, users: users)
+    current_user = conn.assigns.current_user
+
+    users =
+      case current_user.role do
+        :admin -> Accounts.list_users(params)
+        :manager -> Accounts.list_team_users(current_user.id)
+        _ -> nil
+      end
+
+    if users do
+      render(conn, :index, users: users)
+    else
+      conn
+      |> put_status(:forbidden)
+      |> json(%{error: "Manager or admin access required"})
+    end
   end
 
   def sign_up(conn, params) do
@@ -59,18 +73,42 @@ defmodule TimeManagerWeb.UserController do
   end
 
   def update(conn, %{"id" => id, "user" => user_params}) do
-    user = Accounts.get_user!(id)
+    if conn.assigns.current_user.role == :admin do
+      user = Accounts.get_user!(id)
 
-    with {:ok, %User{} = user} <- Accounts.update_user(user, user_params) do
-      render(conn, :show, user: user)
+      if to_string(user.id) == to_string(conn.assigns.current_user.id) and user_params["status"] == "inactive" do
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "You cannot suspend your own administrator account"})
+      else
+        with {:ok, %User{} = user} <- Accounts.update_user_role(user, user_params) do
+          render(conn, :show, user: user)
+        end
+      end
+    else
+      conn
+      |> put_status(:forbidden)
+      |> json(%{error: "Admin access required"})
     end
   end
 
   def delete(conn, %{"id" => id}) do
-    user = Accounts.get_user!(id)
+    if conn.assigns.current_user.role == :admin do
+      user = Accounts.get_user!(id)
 
-    with {:ok, %User{}} <- Accounts.delete_user(user) do
-      send_resp(conn, :no_content, "")
+      if user.id == conn.assigns.current_user.id do
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: "You cannot delete your own administrator account"})
+      else
+        with {:ok, %User{}} <- Accounts.delete_user(user) do
+          send_resp(conn, :no_content, "")
+        end
+      end
+    else
+      conn
+      |> put_status(:forbidden)
+      |> json(%{error: "Admin access required"})
     end
   end
 end

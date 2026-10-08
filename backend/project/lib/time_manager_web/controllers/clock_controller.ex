@@ -11,33 +11,58 @@ defmodule TimeManagerWeb.ClockController do
     render(conn, :index, clocks: clocks)
   end
 
-  # Switch between clocking in and out.
-  def create(conn, %{"userID" => user_id}) do
+  # Switch between work, break, and off-clock states.
+  def create(conn, %{"userID" => user_id} = params) do
     last_clock = Clocks.get_clock_by_user(user_id)
-
-    status =
-      if last_clock do
-        !last_clock.status
-      else
-        true
+    current_state =
+      case last_clock do
+        nil -> "off"
+        %{state: state} when is_binary(state) -> state
+        %{status: true} -> "working"
+        _ -> "off"
       end
 
-    clock_params = %{
-      "time" => DateTime.utc_now() |> DateTime.truncate(:second),
-      "status" => status,
-      "user_id" => String.to_integer(user_id)
-    }
+    action = params["action"] || "clock"
 
-    with {:ok, %Clock{} = clock} <- Clocks.create_clock(clock_params) do
+    next_state =
+      case {action, current_state} do
+        {"break", "working"} -> "break"
+        {"break", "break"} -> "working"
+        {"clock", "off"} -> "working"
+        {"clock", "working"} -> "off"
+        {"clock", "break"} -> "off"
+        _ -> nil
+      end
+
+    if is_nil(next_state) do
       conn
-      |> put_status(:created)
-      |> render(:show, clock: clock)
+      |> put_status(:unprocessable_entity)
+      |> json(%{error: "A break can only be started while working"})
+    else
+      clock_params = %{
+        "time" => DateTime.utc_now() |> DateTime.truncate(:second),
+        "status" => next_state == "working",
+        "state" => next_state,
+        "user_id" => String.to_integer(user_id)
+      }
+
+      with {:ok, %Clock{} = clock} <- Clocks.create_clock(clock_params) do
+        conn
+        |> put_status(:created)
+        |> render(:show, clock: clock)
+      end
     end
   end
 
   def show(conn, %{"userID" => user_id}) do
-    clock = Clocks.get_clock_by_user(user_id)
-    render(conn, :show, clock: clock)
+    if TimeManager.Accounts.can_access_user_data?(conn.assigns.current_user, user_id) do
+      clock = Clocks.get_clock_by_user(user_id)
+      render(conn, :show, clock: clock)
+    else
+      conn
+      |> put_status(:forbidden)
+      |> json(%{error: "You cannot view this user's clock status"})
+    end
   end
 
   def update(conn, %{"id" => id, "clock" => clock_params}) do

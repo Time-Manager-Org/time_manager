@@ -8,7 +8,7 @@
         <router-link to="/sign_up">Create account</router-link>
       </div>
 
-      <header class="login-hero"></header>
+      <header class="login-hero"><h1>Welcome back</h1><p>Enter your details to continue to your workspace.</p></header>
 
       <main class="login-card">
         <div class="desktop-heading">
@@ -32,7 +32,7 @@
                 id="login-username"
                 v-model="username"
                 type="text"
-                placeholder="your_username"
+                placeholder="Username"
                 autocomplete="username"
                 required
               />
@@ -96,9 +96,9 @@ export default {
         const role = data.role || data.user?.role || 'employee';
 
         if (token) {
-          localStorage.setItem('xsrfToken', token);
-          localStorage.setItem('userId', userId);
-          localStorage.setItem('role', role);
+          sessionStorage.setItem('xsrfToken', token);
+          sessionStorage.setItem('userId', userId);
+          sessionStorage.setItem('role', role);
           this.$router.push('/');
         } else {
           this.error = 'Token missing in response';
@@ -119,26 +119,36 @@ export default {
   inset: 0;
   height: 100vh;
   height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--app-background);
   color: var(--app-text);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .login-content {
-  display: contents;
+  display: grid;
+  min-height: 100dvh;
+  grid-template-rows: minmax(130px, 22vh) 1fr auto;
 }
 
 .login-hero {
   position: relative;
   box-sizing: border-box;
+  width: 100%;
   min-height: 0;
-  height: 31vh;
-  padding: max(24px, env(safe-area-inset-top)) 42px 30px;
-  overflow: hidden;
-  color: var(--app-text);
-  background: linear-gradient(128deg, #f6faf7 0%, #eaf3ed 100%);
+  height: auto;
+  padding: max(24px, env(safe-area-inset-top)) clamp(24px, 6vw, 64px) 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 7px;
+  color: #fff;
+  background: #102c4b;
 }
+
+.login-hero h1 { margin: 0; color: #fff; font-size: clamp(25px, 6.8vw, 34px); font-weight: 740; letter-spacing: -.8px; line-height: 1.12; }
+.login-hero > p { max-width: 430px; margin: 6px 0 0; color: #c3d2e1; font-size: 12px; line-height: 1.45; }
 
 .desktop-top-action,
 .desktop-heading {
@@ -147,8 +157,9 @@ export default {
 
 .login-card {
   position: relative;
+  align-self: center;
   width: min(528px, calc(100% - 48px));
-  margin: -40px auto 0;
+  margin: 0 auto;
   padding: 36px;
   border-radius: 40px;
   border: 1px solid #e3ebe5;
@@ -283,16 +294,20 @@ export default {
 
 @media (max-width: 480px) {
   .login-hero {
-    height: 22vh;
-    min-height: 118px;
-    max-height: 160px;
-    padding-right: 26px;
-    padding-left: 26px;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: max(20px, env(safe-area-inset-top)) 24px 18px;
+  }
+
+  .login-card {
+    border-color: #e7eaf0;
+    box-shadow: 0 18px 48px rgb(16 44 75 / 11%);
   }
 
   .login-card {
     width: calc(100% - 28px);
-    margin-top: -28px;
+    margin-top: 0;
     padding: 18px 18px 20px;
     border-radius: 32px;
   }
@@ -404,11 +419,11 @@ export default {
     line-height: 1.55;
   }
 
-  .login-hero,
-  .auth-tabs,
-  .login-footer {
+  .login-hero {
     display: none;
   }
+
+  .desktop-top-action { display: none; }
 
   .login-card {
     box-sizing: border-box;
@@ -423,7 +438,7 @@ export default {
 
   .login-form {
     gap: 24px;
-    margin-top: 0;
+    margin-top: 22px;
   }
 
   .form-group {
@@ -545,4 +560,5 @@ export default {
     margin-top: 8px;
   }
 }
+
 </style>

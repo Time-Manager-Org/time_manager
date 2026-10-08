@@ -5,6 +5,7 @@ defmodule TimeManager.Workingtimes.Workingtime do
   schema "workingtime" do
     field :start, :utc_datetime
     field :end, :utc_datetime
+    field :kind, :string, default: "work"
     field :user_id, :id
 
     timestamps(type: :utc_datetime)
@@ -13,7 +14,8 @@ defmodule TimeManager.Workingtimes.Workingtime do
   @doc false
   def changeset(workingtime, attrs) do
     workingtime
-    |> cast(attrs, [:start, :end, :user_id])
+    |> cast(attrs, [:start, :end, :kind, :user_id])
     |> validate_required([:start, :end, :user_id])
+    |> validate_inclusion(:kind, ["work", "break"])
   end
 end
