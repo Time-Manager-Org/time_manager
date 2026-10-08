@@ -37,7 +37,24 @@
       <section id="page-1" class="page-placeholder">Page 1</section>
       <section id="page-2" class="page-placeholder">Page 2</section>
       <section id="page-3" class="page-placeholder">Page 3</section>
-      <section id="page-4" class="page-placeholder">Page 4</section>
+      <section id="page-4" class="page-placeholder profile-page">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Account details</p>
+            <h1>Profile</h1>
+            <p class="date-line">Your Time Manager account information.</p>
+          </div>
+        </div>
+        <article class="profile-card">
+          <span class="profile-avatar">{{ initials }}</span>
+          <div>
+            <h2>{{ displayName }}</h2>
+            <p>{{ profile.email || 'Email not available' }}</p>
+            <span class="profile-role">Manager</span>
+          </div>
+        </article>
+        <button class="profile-logout" @click="disconnect">Log out</button>
+      </section>
     </main>
   </div>
 </template>
@@ -47,7 +64,33 @@ import api from '../api'
 
 export default {
   name: 'AdminDashboard',
+  data() {
+    return {
+      userId: localStorage.getItem('userId'),
+      profile: {}
+    }
+  },
+  computed: {
+    displayName() {
+      return this.profile.username || this.profile.name || 'Welcome'
+    },
+    initials() {
+      return this.displayName.split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'TM'
+    }
+  },
+  mounted() {
+    this.loadProfile()
+  },
   methods: {
+    async loadProfile() {
+      if (!this.userId) return
+      try {
+        const response = await api.get(`/users/${this.userId}`)
+        this.profile = response.data.data || {}
+      } catch (error) {
+        console.error('Could not load profile:', error)
+      }
+    },
     async disconnect() {
       try {
         await api.post('/users/sign_out')
@@ -80,6 +123,18 @@ export default {
 .page-placeholder:first-child { display: block; }
 .page-content:has(.page-placeholder:target) .page-placeholder { display: none; }
 .page-content:has(.page-placeholder:target) .page-placeholder:target { display: block; }
+.page-content:has(#page-4:target) { display: block; padding: 36px clamp(28px, 4vw, 64px) 52px; }
+.profile-page { width: min(100%, 1500px); margin: 0 auto; font-size: 14px; font-weight: 400; }
+.page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 26px; }
+.eyebrow { margin: 0 0 7px; color: #8b929d; font-size: 12px; font-weight: 650; text-transform: uppercase; }
+.page-heading h1 { margin: 0; color: #20242c; font-size: clamp(26px, 3vw, 34px); font-weight: 720; }
+.date-line { margin: 8px 0 0; color: #8b929d; font-size: 14px; }
+.profile-card { display: flex; align-items: center; gap: 18px; padding: 24px; border: 1px solid #eceef2; border-radius: 20px; background: #fff; box-shadow: 0 6px 20px rgb(27 41 61 / 5%); }
+.profile-avatar { display: grid; width: 62px; height: 62px; flex: 0 0 62px; place-items: center; border-radius: 50%; color: #fff; background: var(--accent); font-size: 19px; font-weight: 700; }
+.profile-card h2 { margin: 0 0 6px; font-size: 18px; }
+.profile-card p { margin: 0; color: #89919c; font-size: 14px; }
+.profile-role { display: inline-block; margin-top: 10px; padding: 5px 9px; border-radius: 999px; color: var(--app-accent-strong); background: var(--app-accent-soft); font-size: 11px; font-weight: 650; }
+.profile-logout { min-height: 44px; margin-top: 16px; padding: 0 17px; border: 1px solid #e1e4e9; border-radius: 11px; color: #48515c; background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
 
 @media (max-width: 700px) {
   .workspace-shell { grid-template-columns: minmax(150px, 38vw) minmax(0, 1fr); }
@@ -88,5 +143,14 @@ export default {
   .brand-mark { width: 34px; height: 34px; flex-basis: 34px; }
   .nav-item { gap: 8px; padding: 0 8px; font-size: 13px; }
   .page-content { padding: 16px; }
+  .page-content:has(#page-4:target) { padding: 24px 18px 30px; }
+  .page-heading { align-items: center; margin-bottom: 20px; }
+  .page-heading h1 { font-size: 27px; }
+  .eyebrow { font-size: 11px; }
+  .date-line { font-size: 13px; }
+}
+
+@media (max-width: 380px) {
+  .page-content:has(#page-4:target) { padding-right: 13px; padding-left: 13px; }
 }
 </style>
