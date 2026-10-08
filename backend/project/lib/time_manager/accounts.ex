@@ -142,7 +142,6 @@ defmodule TimeManager.Accounts do
   end
 
   def verify_token(token) do
-    IO.inspect(token, label: "INCOMING TOKEN")
 
     case Phoenix.Token.verify(TimeManagerWeb.Endpoint, "user_auth", token,
            max_age: @token_max_age_seconds
@@ -154,7 +153,6 @@ defmodule TimeManager.Accounts do
         end
 
       {:error, reason} ->
-        IO.inspect(reason, label: "PHOENIX TOKEN VERIFY ERROR")
         {:error, reason}
     end
   end

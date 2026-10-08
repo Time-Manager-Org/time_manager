@@ -2,12 +2,15 @@ defmodule TimeManager.Accounts.User do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @roles [:employee, :manager, :admin]
+
   schema "users" do
     field :username, :string
     field :email, :string
     field :full_name, :string
     field :password, :string, virtual: true
     field :password_hash, :string
+    field :role, Ecto.Enum, values: @roles, default: :employee
 
     timestamps(type: :utc_datetime)
   end
@@ -20,6 +23,7 @@ defmodule TimeManager.Accounts.User do
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/)
     |> unique_constraint(:email)
     |> put_pass_hash()
+    |> validate_inclusion(:role, @roles)
   end
 
   defp put_pass_hash(%Ecto.Changeset{valid?: true, changes: %{password: password}} = changeset) do

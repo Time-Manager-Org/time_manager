@@ -93,11 +93,12 @@ export default {
         const data = response.data.data || response.data;
         const token = data.xsrf_token || data.xsrfToken || data.token;
         const userId = data.user_id || data.userId || data.user?.id;
+        const role = data.role || data.user?.role || 'employee';
 
         if (token) {
           localStorage.setItem('xsrfToken', token);
           localStorage.setItem('userId', userId);
-          localStorage.removeItem('role');
+          localStorage.setItem('role', role);
           this.$router.push('/');
         } else {
           this.error = 'Token missing in response';
